@@ -53,7 +53,11 @@ Then set status=drafting, next_action=writer, and proceed to Writer Pass.
 
 ```
 drafting → writer pass
-  ↓ (writer created requests?)
+  ↓
+latex compile check (MANDATORY after every writer pass)
+  ├── PASS → continue to next decision
+  └── FAIL → awaiting_latex_fix → implement pass → writer pass (verify fix) → latex compile
+  ↓ (compile passed, writer created requests?)
   yes → awaiting_implementation → implement pass
   no  → awaiting_review → reviewer pass
   ↓
@@ -61,10 +65,14 @@ awaiting_implementation → implement pass
   ↓ (implement done)
 awaiting_writer_integration → writer pass (integration mode)
   ↓
+latex compile check (MANDATORY)
+  ├── PASS → awaiting_review
+  └── FAIL → awaiting_latex_fix → implement pass → writer pass (verify fix) → latex compile
+  ↓
 awaiting_review → reviewer pass
   ↓
 revising → triage → writer/implement/user
-  ↓ (no blocking issues, no open requests)
+  ↓ (no blocking issues, no open requests, latex compiles)
 complete
 ```
 
@@ -76,11 +84,79 @@ Spawn a writer agent:
 - Writer must read existing `main.tex` and `sections/*.tex` if they exist
 - Writer writes/updates LaTeX files AND creates implementation requests in `doc/paper/requests/` if evidence is missing
 - After writer returns: scan for new request files, update state.md open requests table
-- If writer created open requests → status = awaiting_implementation, next_action = implement
-- If writer created no requests → status = awaiting_review, next_action = reviewer
-- If writer reports blocked → status = blocked, next_action = user
+- **Do NOT decide next_action yet.** Proceed to LaTeX Compile Gate first.
 
-### Implement Pass (status: awaiting_implementation)
+### Writer Integration Pass (status: awaiting_writer_integration)
+
+Same as Writer Pass, but tell writer: "Integrate available artifacts from `doc/paper/artifacts/` into the paper. Read each RESULT.md and backfill facts into the appropriate sections. Do not create new implementation requests unless integration reveals new gaps."
+After writer returns: **Do NOT decide next_action yet.** Proceed to LaTeX Compile Gate first.
+
+### LaTeX Compile Gate (MANDATORY after every Writer Pass and Writer Integration Pass)
+
+This is a coordinator action (not an agent). Run the compile check yourself:
+
+```bash
+cd doc/paper && pdflatex -interaction=nonstopmode -halt-on-error main.tex 2>&1 | tail -80
+```
+
+If `main.tex` does not exist yet (first writer pass), skip compilation and proceed to the decision below.
+
+**On SUCCESS (exit code 0, no fatal errors):**
+- If there are open requests with `owner=implement` and `status=open` → status = awaiting_implementation, next_action = implement
+- If no open requests → status = awaiting_review, next_action = reviewer
+- If writer reported blocked → status = blocked, next_action = user
+
+**On FAILURE (exit code != 0 or LaTeX fatal error):**
+1. Save the compile error log to `doc/paper/artifacts/latex-compile/compile_error_iter_<n>.log`
+2. Create an implementation request for the compile failure:
+
+```markdown
+# Implementation Request: latex-compile-iter-<n>
+
+request_id: latex-compile-iter-<n>
+source: loop
+status: open
+owner: implement
+
+## Paper Claim
+LaTeX document must compile without fatal errors. Current `main.tex` and `sections/*.tex` produce a build failure.
+
+## Task Type
+latex_compile
+
+## Required Outputs
+- Fixed LaTeX source files that compile with `pdflatex -interaction=nonstopmode -halt-on-error main.tex`
+- Updated `doc/paper/artifacts/latex-compile/RESULT.md` with: status (done/blocked/failed), the compile command, log, and list of files changed
+
+## Error Log
+See `doc/paper/artifacts/latex-compile/compile_error_iter_<n>.log`
+
+## Inputs
+- `doc/paper/main.tex`
+- `doc/paper/sections/*.tex`
+- `doc/paper/ref.bib`
+
+## Acceptance Criteria
+- `pdflatex` exits with code 0
+- No undefined references or missing citations that prevent compilation (warnings are acceptable)
+- Missing `\end{document}` or unclosed environments are fixed
+
+## Writer Integration Target
+- All LaTeX source files in `doc/paper/`
+```
+
+3. Update state.md: add this request to Open Requests table
+4. status = awaiting_latex_fix, next_action = implement
+
+**Rationale:** LaTeX must compile before reviewer sees the draft. An uncompilable paper wastes reviewer effort on syntax errors instead of content.
+
+### LaTeX Fix Complete Gate (after implement fixes latex)
+
+When implement finishes a `latex-compile-*` request:
+- If implement reports `done` → status = awaiting_writer_integration, next_action = writer. Writer must verify the fix didn't break content, then compile again.
+- If implement reports `blocked` or `failed` → status = blocked, next_action = user. Report the unresolved compile error.
+
+### Implement Pass (status: awaiting_implementation or awaiting_latex_fix)
 
 Find the first open request with owner=implement in state.md.
 Spawn an implement agent:
@@ -88,13 +164,13 @@ Spawn an implement agent:
 - Prompt: read `doc/paper/prompt/implement.md` for role instructions, then execute the specific request at `doc/paper/requests/<request_id>.md`
 - Implement produces `doc/paper/artifacts/<request_id>/RESULT.md` and supporting files
 - After implement returns: update state.md artifacts table, mark request as done/blocked/failed
+
+**If the completed request was a `latex_compile` type:**
+→ Proceed to LaTeX Fix Complete Gate above.
+
+**Otherwise (normal experiment/evidence request):**
 - If more open requests remain → status = awaiting_implementation, next_action = implement
 - If all requests done → status = awaiting_writer_integration, next_action = writer
-
-### Writer Integration Pass (status: awaiting_writer_integration)
-
-Same as Writer Pass, but tell writer: "Integrate available artifacts from `doc/paper/artifacts/` into the paper. Read each RESULT.md and backfill facts into the appropriate sections. Do not create new implementation requests unless integration reveals new gaps."
-After writer returns: status = awaiting_review, next_action = reviewer.
 
 ### Reviewer Pass (status: awaiting_review)
 
@@ -121,8 +197,8 @@ Parse the Loop Triage table. Route:
 All conditions met → status = complete, next_action = none:
 - No blocking reviewer issues in latest review
 - No open implementation requests
+- **LaTeX compiles with exit code 0** (run `pdflatex -interaction=nonstopmode -halt-on-error main.tex` to verify)
 - All experimental values traceable to an artifact path
-- (LaTeX compile check: set as future request when paper is near-complete)
 
 ## Agent Spawn Protocol
 
@@ -161,13 +237,14 @@ All agents write to `doc/paper/`. The coordinator (you) only writes to `doc/pape
 ## Status Output (every invocation must end with this)
 
 ```
-LOOP_STATUS: <status>
+LOOP_STATUS: drafting | awaiting_implementation | awaiting_writer_integration | awaiting_latex_fix | awaiting_review | revising | blocked | complete
 ITERATION: <n>
-NEXT_ACTION: <action>
+NEXT_ACTION: writer | implement | reviewer | user | none
 STATE_FILE: doc/paper/state.md
 OPEN_REQUESTS: <count>
 BLOCKING_ISSUES: <count>
-LAST_AGENT: <writer|implement|reviewer|none>
+LAST_AGENT: <writer|implement|reviewer|coordinator|none>
+LATEX_COMPILE: passed | failed | skipped
 ```
 
 ## ScheduleWakeup
@@ -184,9 +261,11 @@ If status is `complete`: do NOT schedule wakeup. Report completion.
 ## Safety Rules
 
 - Never spawn more than ONE agent per invocation
+- **NEVER skip LaTeX Compile Gate after a writer pass** — uncompilable LaTeX must not reach reviewer
 - Never skip reviewer — every writer integration must be reviewed
 - Never let writer fabricate quantitative results — always check for implementation requests
 - If same issue appears in 2 consecutive reviews → blocked, ask user
 - If implement fails 3 times on same request → blocked, ask user
+- If latex compile fails 3 consecutive times → blocked, ask user
 - Keep state.md machine-readable (tables must parse)
 - Increment iteration counter every time you are invoked and do work
