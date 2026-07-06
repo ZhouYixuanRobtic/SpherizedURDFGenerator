@@ -12,7 +12,7 @@ In practice, robot descriptions carry high-detail visual meshes alongside simpli
 % ---- 2. Existing practice -%
 Current collision geometry authoring is largely manual: designers hand-place primitives, simplify meshes with modeling tools, or rely on convex decomposition.
 These approaches are time-consuming, hard to reproduce, and produce collision models at arbitrary fidelity levels.
-Simulators and planners---MuJoCo~\cite{todorov2012mujoco}, Drake~\cite{drake}, PyBullet~\cite{coumans2018pybullet}---support analytic collision geometries with closed-form distance computation, but generating such primitives from existing URDF descriptions remains unsolved.
+Simulators and planners---MuJoCo~\cite{todorov2012mujoco}, Drake~\cite{drake}, PyBullet~\cite{coumans2018pybullet}---support analytic collision geometries with closed-form distance computation, but generating such primitives from existing URDF descriptions within an open-source, URDF-native toolchain has not been addressed.
 
 % ---- 3. Analytic primitives -%
 Analytic primitives (spheres, capsules, boxes) offer significant advantages over meshes: stable signed-distance evaluation, analytical contact gradients, and efficient broad-phase culling~\cite{pan2012fcl}.

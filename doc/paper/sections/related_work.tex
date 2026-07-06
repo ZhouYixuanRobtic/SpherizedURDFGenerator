@@ -6,9 +6,7 @@
 
 % ---- 1. URDF and Robot Description Tooling ----
 The Unified Robot Description Format (URDF)~\cite{urdf_doc} is the dominant XML-based representation for kinematic trees in the ROS ecosystem.
-It supports a fixed set of collision primitives---spheres, cylinders, boxes, and meshes---but lacks native capsule elements, requiring capsule-based approximations to be decomposed into cylinders and spheres.
-Xacro~\cite{xacro} extends URDF with macro preprocessing but the output remains standard URDF.
-Several recent works have proposed alternative description formats such as MJCF~\cite{todorov2012mujoco} and SDFormat~\cite{sdformat}, yet URDF remains the de facto standard for ROS-compatible manipulators.
+Standard URDF (as implemented by urdfdom~\cite{urdfdom}) supports spheres, cylinders, boxes, and meshes but lacks a native capsule element, requiring capsule-based approximations to be decomposed into cylinder-plus-sphere primitives. The Tesseract robotics framework extends URDF parsing with custom \texttt{<capsule>} and \texttt{<convex\_mesh>} tags, representing an alternative parser-extension approach to our standard-primitive decomposition strategy. Xacro~\cite{xacro} provides macro preprocessing but the output remains standard URDF. Alternative formats such as MJCF~\cite{todorov2012mujoco} and SDFormat~\cite{sdformat} offer richer geometry primitives, yet URDF remains the de facto standard for ROS-compatible manipulators.
 
 % ---- 2. Convex Decomposition and Hull Approximation -%
 Convex decomposition for collision geometry is a well-studied problem.
@@ -33,4 +31,4 @@ The gProximity library~\cite{lauterbach2010gproximity} exploits the swept-sphere
 Our work addresses this gap by providing an end-to-end pipeline that integrates PCA sectioning, adaptive circle fitting with circle-outside-area (COA) thresholding, and tightness-driven refinement into a URDF-compatible tool.
 
 % ---- 5. Tooling Gap -%
-While each component---convex decomposition, sphere-tree generation, and capsule fitting---has been addressed individually, no existing open-source toolchain integrates them into a single URDF-to-URDF pipeline with sidecar primitive parameter export, validation metrics, and presets for reproducible tuning. Our work fills this integration gap, producing immediately usable URDF output and analytically reusable primitive data.
+While each component---convex decomposition, sphere-tree generation, and capsule fitting---has been addressed individually, prior work does not combine them into a single URDF-to-URDF pipeline with sidecar analytic parameter export, built-in validation metrics, and preset-based reproducible tuning. The MathWorks capsuleApproximation function (R2022b) provides capsule fitting for rigid body trees but is closed-source and not URDF-native. Our work fills this specific integration gap for the open-source ROS URDF ecosystem.

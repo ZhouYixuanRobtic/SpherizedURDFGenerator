@@ -10,8 +10,11 @@ These metrics serve both as diagnostic tools during parameter tuning and as pass
 % ---- A. Coverage Metrics ----
 \subsection{Coverage}
 
-\paragraph{Coverage.}
+\paragraph{Vertex coverage.}
 Coverage is satisfied when every mesh vertex lies inside at least one capsule: $\max_i \mathrm{signed\_distance}_i \leq \epsilon$, where negative values indicate the vertex is inside a capsule. The worst (most positive) signed distance quantifies the maximum uncovered gap when coverage is not achieved.
+
+\paragraph{Surface-sampled coverage.}
+Vertex coverage does not imply continuous coverage over triangular faces. When conservative collision reasoning is required, we additionally sample points on each mesh surface with a fixed random seed and report the worst signed distance, the 95th percentile signed distance, and the uncovered sample fraction.
 
 % ---- B. Volume and Tightness Metrics ----
 \subsection{Volume and Tightness}
