@@ -29,4 +29,4 @@ Advocating for and implementing a native capsule element in the URDF standard wo
 The JSON sidecar format is a step toward making primitive parameters reusable, but tighter integration with collision-checking libraries (e.g., FCL~\cite{pan2012fcl} and its derivatives, or the Drake geometry framework) would allow the generated capsules to be used natively without manual sidecar parsing.
 
 \paragraph{Learning-based fitting.}
-While the current pipeline is entirely geometric, a learned approach could predict capsule configurations directly from mesh topology, potentially reducing runtime and improving robustness on complex shapes.
+While the current pipeline is entirely geometric, a learned approach could potentially predict capsule configurations from mesh topology, though generalizability beyond the training distribution and the cost of generating labeled training data remain open challenges.

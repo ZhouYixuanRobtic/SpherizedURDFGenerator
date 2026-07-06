@@ -41,7 +41,7 @@ Figure~\ref{fig:method_schematic} illustrates the full pipeline visually on a re
 \subsection{Mesh Preparation and Frame Handling}
 
 Before fitting, the pipeline resolves the mesh source from the URDF.
-For the default visual-mesh source, any non-OBJ/STL visual meshes (e.g., COLLADA \texttt{.dae} files) are converted to OBJ format in a Python preprocessing step using Trimesh~\cite{trimesh}.
+For the default visual-mesh source, any non-OBJ/STL visual meshes (e.g., COLLADA format files) are converted to OBJ format in a Python preprocessing step using Trimesh~\cite{trimesh}.
 The loaded mesh is then processed through ManifoldPlus~\cite{huang2022manifoldplus} to obtain a watertight manifold, which is required for robust cross-section slicing.
 The watertight mesh vertices are transformed from the mesh-local frame to the link frame using the origin transform specified in the URDF element (translation $\mathbf{T}$ and rotation matrix $R$):
 \begin{equation}
@@ -64,7 +64,7 @@ The mesh is sliced with $N$ planes perpendicular to $\mathbf{u}$ at uniformly sp
 For each slice, triangle-plane intersections are computed: each triangle that straddles the plane contributes a 2D line segment in the plane's local basis $(\mathbf{e}_1, \mathbf{e}_2)$.
 These segments are chained into closed polygonal contours by iteratively matching segment endpoints, producing a set of 2D cross-section contours $\{P_j\}$ per plane.
 
-The section count $N$ is controlled by the parameter \texttt{NSections}; typical values range from 2 (coarse) to 8 (fine).
+The section count $N$ is a user-configurable parameter; typical values range from 2 (coarse) to 8 (fine).
 
 % ---- D. Cross-Section Circle Fitting ----
 \subsection{Cross-Section Circle Fitting}
@@ -78,7 +78,7 @@ For a single circle, the minimum enclosing circle is computed via Welzl's random
 A circle is considered to cover the contour when its circle-outside-area (COA)~\cite{wu2018capsule}---the area of the circle lying outside the contour polygon---falls below a threshold $\tau$.
 
 \paragraph{Adaptive multi-circle fitting.}
-When \texttt{AdaptiveCircleCount} is enabled, the pipeline starts with one MEC and iteratively refines it using Lloyd-style clustering.
+When adaptive circle fitting is enabled, the pipeline starts with one MEC and iteratively refines it using Lloyd-style clustering.
 At each step, the circle with the largest COA is split into two via k-means ($k = 2$) on its assigned contour samples.
 Each resulting cluster is replaced with a fresh MEC, and the process repeats until the total COA falls below $\tau$ or the maximum circle count per section is reached.
 The COA for a circle $(\mathbf{o}, r)$ relative to a polygon $P$ is computed as the signed sum of circular-segment areas between the circle and each polygon edge, following Wu et al.~\cite{wu2018capsule}:
@@ -92,7 +92,7 @@ A_{\mathrm{in}}, & \mathbf{o} \text{ inside } P, \\
 where $A_{\mathrm{in}}$ is the signed accumulated area of circular segments inside the polygon.
 
 \paragraph{Fixed-count circle fitting.}
-When \texttt{AdaptiveCircleCount} is disabled (the default), a fixed number of circles $k$ (controlled by \texttt{MaxCirclesPerSection}) is fitted per section using deterministic farthest-point initialization followed by $k$-means clustering.
+When adaptive fitting is disabled (the default), a fixed number of circles $M$ (the per-section maximum) is fitted per section using deterministic farthest-point initialization followed by $k$-means clustering.
 
 % ---- E. Capsule Construction Across Sections ----
 \subsection{Capsule Construction Across Sections}
@@ -138,8 +138,8 @@ This process is iterated until convergence.
 \paragraph{Inflation-based splitting.}
 When a capsule exhibits excessive radius inflation---measured by the ratio $r / r_{\text{median\_bin}}$, where $r_{\text{median\_bin}}$ is the median of per-bin maximum vertex distances along the capsule axis---the pipeline attempts to split the capsule at the bin where inflation is worst.
 Each split produces two child capsules whose radii are re-grown from the assigned vertex subsets.
-A split is accepted only if it reduces the capsule union volume or improves the radius-inflation metric above a threshold (\texttt{MinSplitVolumeImprovement}).
-Splitting is also triggered when the capsule union volume relative to the link AABB volume (\texttt{capV/aabb}) exceeds a configured ceiling (\texttt{MaxCapVAabbRatio}).
+A split is accepted only if it reduces the capsule union volume or improves the radius-inflation metric above a threshold $\delta_{\min}$.
+Splitting is also triggered when the capsule union volume relative to the link AABB volume exceeds a configured ceiling $\eta_{\max}$.
 
 \paragraph{Nested-capsule pruning.}
 After refinement, capsules that are entirely contained within another capsule are removed.
@@ -151,7 +151,7 @@ d(\mathbf{p}_1^i, \overline{\mathbf{p}_0^j\mathbf{p}_1^j}) + r_i \leq r_j.
 Since capsules are convex, this guarantees $c_i \subseteq c_j$, so removing $c_i$ does not affect coverage.
 
 \paragraph{Budget enforcement.}
-If after refinement the capsule count exceeds $\texttt{MaxCapsulesPerLink}$, the pipeline iteratively removes the capsule whose removal minimizes the resulting capsule union volume, re-growing the remaining capsules to maintain coverage after each removal.
+If after refinement the capsule count exceeds the per-link budget $K_{\max}$, the pipeline iteratively removes the capsule whose removal minimizes the resulting capsule union volume, re-growing the remaining capsules to maintain coverage after each removal.
 
 % ---- G. URDF-Compatible Emission ----
 \subsection{URDF-Compatible Emission}

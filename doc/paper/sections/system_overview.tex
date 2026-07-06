@@ -12,71 +12,46 @@ The method schematic (Figure~\ref{fig:method_schematic}) provides a detailed vis
 \subsection{Inputs and Outputs}
 
 The input is a URDF file whose links contain at least one \texttt{<mesh>} element in either the collision or visual geometry section.
-For sphere and capsule modes, the toolchain defaults to fitting the visual mesh (\texttt{--mesh-source visual}) to capture the true link shape, since visual meshes typically reflect the actual link geometry while collision meshes may be pre-simplified.
-The \texttt{--mesh-source collision} flag switches to the collision mesh for fitting.
+For sphere and capsule modes, the toolchain defaults to fitting the visual mesh to capture the true link shape, since visual meshes typically reflect the actual link geometry while collision meshes may be pre-simplified.
+A flag switches the fit source to the collision mesh when visual meshes are unavailable.
 
 The primary output is a modified URDF file in which the \texttt{<collision>} elements of each link have been replaced with the approximation primitives.
 All \texttt{<visual>}, \texttt{<inertial>}, and \texttt{<joint>} elements pass through untouched.
-For sphere and capsule modes, a JSON sidecar file (at the same path as the output URDF but with \texttt{.json} extension) stores the canonical analytic parameters.
+For sphere and capsule modes, a JSON sidecar file (at the same path as the output URDF) stores the canonical analytic parameters.
 Convex mode does not produce a sidecar because the output is itself a mesh file.
 
 The toolchain does not process Xacro files or SDFormat models.
-Xacro files must be pre-processed to standard URDF before use (\texttt{python -m xacro robot.urdf.xacro -o robot.urdf}).
-The only accepted and emitted format is \texttt{.urdf}.
+Xacro files must be preprocessed to standard URDF before use (via the xacro macro processor).
+The only accepted and emitted format is URDF.
 
 % ---- B. Approximation Modes ----
 \subsection{Approximation Modes}
 
 \paragraph{Convex mode.}
 Convex mode replaces each link's collision mesh with its convex hull, computed via CGAL's Quickhull implementation accessed through the libigl copyleft interface.
-The output is a standard URDF whose \texttt{<mesh>} elements point to generated \texttt{.obj} convex-hull files.
+The output is a standard URDF whose mesh elements point to generated OBJ convex-hull files.
 This mode produces the tightest mesh-based approximation and is suitable when the target simulator or planner handles convex meshes natively.
 
 \paragraph{Sphere mode.}
 Sphere mode fits a sphere-tree approximation to each link mesh using the vendored \texttt{sphere\_tree} library~\cite{mlund_spheretree}.
 The algorithm constructs a medial-axis decomposition, producing a set of covering spheres stored in the URDF as \texttt{<sphere>} elements and in the JSON sidecar as per-link \texttt{spheres} arrays with \texttt{center} and \texttt{radius} fields.
-Two presets are provided: \texttt{single} (one bounding sphere per link) and \texttt{default} (multi-sphere medial tree).
+Two presets are provided: \emph{single} (one bounding sphere per link) and \emph{default} (multi-sphere medial tree).
 
 \paragraph{Capsule mode.}
 Capsule mode is the primary contribution of this work and is described in detail in Section~\ref{sec:method}.
 Each capsule is emitted in the URDF as one \texttt{<cylinder>} element (the body) plus two \texttt{<sphere>} elements (the hemispherical end caps), since URDF has no native capsule element.
 The JSON sidecar stores the canonical representation---per-link \texttt{capsules} arrays with \texttt{p0}, \texttt{p1}, and \texttt{radius}---so downstream users can evaluate the analytic capsule directly without reconstructing it from the decomposed URDF primitives.
-Three named presets are available: \texttt{single} (one conservative capsule per link), \texttt{default} (recommended low-count fit), and \texttt{high\_detail} (more axial sections and larger capsule budget).
+Three named presets are available: \emph{single} (one conservative capsule per link), \emph{default} (recommended low-count fit), and \emph{high\_detail} (more axial sections and larger capsule budget).
 
 % ---- C. Python and CLI Interface ----
-\subsection{Python and CLI Interface}
+\subsection{Interface}
 
-The toolchain is available as the Python package \texttt{urdf-approx-geom} with both a command-line interface and a public Python API.
-
-\paragraph{CLI commands.}
-The CLI exposes the following commands:
-\begin{itemize}
-    \item \texttt{generate} --- generate one mode (\texttt{--mode convex|sphere|capsule|all}) from an input URDF.
-    \item \texttt{presets} --- list all named presets for each mode.
-    \item \texttt{validate} --- compute coverage and tightness metrics from a generated JSON sidecar.
-    \item \texttt{compare} --- compare two capsule JSON sidecars with optional \texttt{--require-improvement}.
-    \item \texttt{compare-all} --- generate all approximation variants and bundle them for side-by-side viewing in robot\_viewer~\cite{robot_viewer}.
-    \item \texttt{visualize} --- visualize generated geometry through robot\_viewer, MuJoCo, or PyBullet backends.
-\end{itemize}
-
-\paragraph{Python API.}
-The core Python functions are:
-\begin{itemize}
-    \item \texttt{generate(mode, input\_urdf, output\_urdf, ...)} --- run one mode and return a \texttt{GenerateResult} with paths and primitive count.
-    \item \texttt{generate\_all(input\_urdf, output\_dir, ...)} --- run all three modes and return a list of results.
-    \item \texttt{generate\_capsule\_multi(input\_urdf, outputs, ...)} --- fit multiple capsule presets sharing a single mesh-load and Manifold pass per link.
-    \item \texttt{generate\_sphere\_pair(input\_urdf, ...)} --- run sphere tree once and emit both the default multi-sphere and single-sphere URDFs.
-\end{itemize}
-
-\paragraph{Configuration.}
-Each mode reads a YAML configuration file that controls fitting parameters.
-Named presets are resolved from the installed config directory.
-Custom configurations can be passed via \texttt{--config} in the CLI or the \texttt{config} parameter in the Python API.
+The toolchain exposes three core operations through both a command-line interface and a Python API: generation (producing URDF output for any mode), validation (computing coverage and tightness metrics from generated output), and comparison (evaluating quality differences between configurations). The Python API additionally supports batch processing across all modes and presets, and a containerized pipeline ensures reproducible execution across environments.
 
 % ---- D. Reproducibility ----
 \subsection{Reproducibility}
 
 The toolchain supports reproducible execution in several ways.
 A published Docker image bundles all dependencies, the installed Python package, and the config tree, so the same command produces the same output across environments.
-The capsule fitting pipeline uses deterministic random seeds (fixed at \texttt{0xC0FFEE}) for stochastic sub-steps such as the Welzl minimum-enclosing-circle shuffle and k-means initialization, ensuring bit-identical output for identical inputs and configuration.
-Built-in validation gates (\texttt{validate}) and comparison workflows (\texttt{compare}) allow users to verify that approximation quality meets specified thresholds.
+The capsule fitting pipeline uses a fixed random seed for stochastic sub-steps such as the Welzl minimum-enclosing-circle shuffle and k-means initialization, ensuring bit-identical output for identical inputs and configuration.
+Built-in validation gates and comparison workflows allow users to verify that approximation quality meets specified thresholds.

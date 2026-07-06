@@ -18,6 +18,7 @@ The trade-off is higher primitive count: a typical sphere-tree approximation req
 
 \textbf{Capsule mode} is the best choice when smooth, low-count analytic primitives are desired.
 Capsules provide constant-time point-to-capsule distance, making them attractive for collision-atlas precomputation, swept-volume computation along trajectories, and analytical signed-distance fields for motion planning.
+These analytic primitives support constant-time collision distance evaluation, making them suitable for collision-checking in motion planning (e.g., via FCL~\cite{pan2012fcl} or OMPL), real-time simulation, and differentiable collision pipelines.
 The principal-axis sectioning assumption means that capsules are most effective on elongated, roughly tubular link geometries---precisely the shape of most robot arm links.
 
 % ---- B. URDF Compatibility ----
@@ -53,7 +54,7 @@ Additionally, the PCA axis captures only the global elongation; locally curved l
 \subsection{Reproducibility and Practical Use}
 
 The toolchain emphasizes reproducible execution through deterministic random seeds, fixed preset definitions, and Docker packaging.
-The built-in validation gates allow users to define acceptance criteria for approximation quality (e.g., ``$\mathrm{capV/aabb} < 2.5$ for all links'') and check them programmatically via the \texttt{validate} and \texttt{compare} CLI commands.
+The built-in validation gates allow users to define acceptance criteria for approximation quality (e.g., ``$\mathrm{capV/aabb} < 2.5$ for all links'') and check them programmatically.
 
 For users who need to tune beyond the named presets, the YAML configuration system provides fine-grained control over all fitting parameters.
-The recommended workflow is to start with the \texttt{default} preset, inspect the metrics via \texttt{validate}, adjust parameters iteratively, and use \texttt{compare} to verify that the candidate preset improves upon the baseline.
+The recommended workflow starts from the default configuration, proceeds through iterative metric inspection and parameter adjustment, and verifies improvement against the baseline at each step.
