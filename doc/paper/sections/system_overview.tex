@@ -46,7 +46,7 @@ Three named presets are available: \emph{single} (one coarse capsule per link), 
 % ---- C. Python and CLI Interface ----
 \subsection{Interface}
 
-The toolchain exposes three core operations through both a command-line interface and a Python API: generation (producing URDF output for any mode), validation (computing coverage and tightness metrics from generated output), and comparison (evaluating quality differences between configurations). The Python API additionally supports batch processing across all modes and presets, and a containerized pipeline ensures reproducible execution across environments.
+The toolchain exposes three core operations through both a command-line interface and a Python API: generation (producing URDF output for any mode), validation (computing coverage and tightness metrics from generated output), and comparison (evaluating quality differences between configurations). The Python API additionally supports batch processing across all modes and presets. The compare-all workflow generates robot\_viewer~\cite{robot_viewer} visualization bundles for qualitative inspection across all modes and presets. A containerized pipeline ensures reproducible execution across environments.
 
 % ---- D. Reproducibility ----
 \subsection{Reproducibility}
