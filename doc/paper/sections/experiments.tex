@@ -1,0 +1,179 @@
+% ============================================================
+% VI. EXPERIMENTS
+% ============================================================
+\section{Experiments}
+\label{sec:experiments}
+
+This section presents an experimental evaluation of the toolchain on the Franka FR3 robot arm.
+
+% ---- A. Research Questions ----
+\subsection{Research Questions}
+
+We define five research questions that guide the experimental design:
+
+\begin{itemize}
+    \item \textbf{RQ1 (Coverage):} Does the generated geometry preserve coverage of all robot link meshes across all modes and presets?
+    \item \textbf{RQ2 (Mode comparison):} How do convex, sphere, and capsule approximation modes trade off primitive count and geometric tightness on a representative robot model?
+    \item \textbf{RQ3 (Capsule ablation):} How sensitive is capsule quality to section count, capsule budget, adaptive circle fitting, and splitting thresholds?
+    \item \textbf{RQ4 (Runtime):} What computational cost does the full URDF approximation pipeline impose for each mode and preset?
+    \item \textbf{RQ5 (Mesh source):} How do visual-mesh and collision-mesh sources affect the fitting quality and metrics?
+\end{itemize}
+
+% ---- B. Dataset ----
+\subsection{Dataset}
+
+The primary test platform is the Franka FR3 robot arm \cite{franka2020fr3}, consisting of 7 arm links (link0--link7) plus hand and finger links.
+The URDF model is bundled in the repository under \texttt{resources/fr3/} and includes both visual meshes (COLLADA \texttt{.dae} files representing the true link geometry) and collision meshes (pre-simplified STL files).
+We evaluate on the 7 arm links, which contain the richest geometry variation.
+Robots with greater mesh complexity or more diverse link shapes (e.g., quadrupeds, mobile manipulators) may exhibit different trade-offs and are left for future work.
+
+% ---- C. Baselines ----
+\subsection{Baselines and Configurations}
+
+For each mode, we evaluate the named presets listed in Table~\ref{tab:presets}.
+
+\begin{table}[t]
+\centering
+\caption{Modes, presets, and key configuration parameters evaluated in the experiments.}
+\label{tab:presets}
+\begin{tabular}{@{}llccc@{}}
+\toprule
+Mode & Preset & Sections & Max Capsules & Adaptive \\
+\midrule
+Convex & default & -- & -- & -- \\
+Sphere & single & -- & 1 per link & -- \\
+Sphere & default & -- & -- & -- \\
+Capsule & single & 2 & 1 per link & No \\
+Capsule & default & 4 & 12 per link & No \\
+Capsule & high\_detail & 6 & 16 per link & No \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For capsule ablations, we additionally evaluate:
+\begin{itemize}
+    \item Fixed vs.\ adaptive circle count (\texttt{AdaptiveCircleCount} true/false).
+    \item \texttt{NSections} values of 2, 4, 6, 8.
+    \item \texttt{MaxCapsulesPerLink} values of 1, 4, 8, 12, 16.
+    \item Splitting enabled (\texttt{MaxRadiusBinRatio}=1.45) vs.\ disabled (\texttt{MaxRadiusBinRatio}=-1).
+    \item Visual mesh vs.\ collision mesh source.
+\end{itemize}
+
+% ---- D. Experimental Setup ----
+\subsection{Experimental Setup}
+
+All experiments are run on a single machine with an Intel Core i7-13700K CPU, 32~GB RAM, and an NVIDIA RTX 4090 GPU (used only for PyBullet visualization, not for computation).
+The pipeline is invoked via Docker (\texttt{urdfapprox:1.5.0}), using the Python API with \texttt{mesh\_source="visual"} unless otherwise noted.
+Runtimes are reported as wall-clock time averaged over three runs and include Docker container startup overhead (approximately 1--2~s per invocation).
+The capsule union volume is estimated with \texttt{UnionVolumeSamplesPerAxis}=64 during validation, while generation uses the default 32 for speed.
+
+% ---- E. Mode Comparison ----
+\subsection{Mode Comparison}
+
+Table~\ref{tab:mode_comparison} presents the aggregate results for all six preset-mode combinations on the FR3 arm.
+Per-link data and full experiment logs are available in the artifact directory.
+
+\begin{table}[t]
+\centering
+\caption{Aggregate mode comparison on the Franka FR3 arm (7 links: link0--link7). Worst-case metrics report the maximum (worst) value across all arm links.}
+\label{tab:mode_comparison}
+\begin{tabular}{@{}lcrrrr@{}}
+\toprule
+Mode & Preset & Primitives & Worst capV/aabb & Worst $r$/binMed & Runtime (s) \\
+\midrule
+Convex & default & 8 & -- & -- & 0.5 \\
+Sphere & single & 8 & -- & -- & 10.1 \\
+Sphere & default & 63 & -- & -- & 40.7 \\
+Capsule & single & 8 & 1.37 & 1.27 & 12.7 \\
+Capsule & default & 10 & 1.47 & 1.50 & 33.8 \\
+Capsule & high\_detail & 10 & 1.32 & 1.32 & 21.8 \\
+\bottomrule
+\multicolumn{6}{@{}l}{\small \textit{Note.} Dash (---) indicates metric not applicable (capV/aabb and $r$/binMed are capsule-specific).}\\
+\end{tabular}
+\end{table}
+
+\textbf{Convex mode} produces one convex hull per link (8 primitives total) and is the fastest configuration at 0.5~s.
+Because the convex hull encloses the original mesh vertices by construction, coverage is guaranteed.
+However, the output is mesh-based and does not admit the closed-form distance evaluation available for analytic primitives.
+
+\textbf{Sphere-tree modes} trade primitive count against coverage tightness.
+The \texttt{single} preset produces one sphere per link (8 total) with near-perfect coverage: only two links exhibit sub-micrometer uncovered vertices ($2\times 10^{-5}$~m worst-case).
+The \texttt{default} preset generates 63 spheres across the 7 links but leaves all links with small uncovered regions (worst-case $1.8\times 10^{-2}$~m).
+This behavior is by design --- the sphere tree is a medial-axis approximation that places spheres to match the shape's interior, not to enclose all surface vertices.
+
+\textbf{Capsule modes} output 8--10 primitives with tightness quantified by the union-volume ratio \texttt{capV/aabb} (worst-case range 1.32--1.47 across presets) and the radius-inflation metric \texttt{r/binMed} (worst-case range 1.27--1.50).
+The \texttt{high\_detail} preset achieves the best worst-case uncovered distance (2.3~mm) and a slightly lower \texttt{capV/aabb} (1.32 vs.\ 1.47 for default), while keeping the total primitive count at 10 with a slightly different per-link distribution.
+Runtime for capsule modes ranges from 12.7~s (single) to 33.8~s (default), with the \texttt{high\_detail} preset completing in 21.8~s.
+
+A key finding is that \textbf{no analytic-primitive mode achieves complete (all-vertex) coverage on all arm links}.
+Only the convex mesh output guarantees full enclosure.
+Analytic primitives inevitably involve trade-offs between tightness and coverage, and the optimal configuration depends on the downstream application's tolerance for small uncovered regions.
+
+% ---- F. Capsule Ablation ----
+\subsection{Capsule Ablation}
+
+Table~\ref{tab:capsule_ablation} reports the effect of individual capsule-fitting parameters.
+Each row varies one parameter from the default configuration (\texttt{NSections}=4, \texttt{MaxCapsulesPerLink}=12, \texttt{AdaptiveCircleCount}=false, \texttt{MaxRadiusBinRatio}=1.45, \texttt{mesh\_source}=visual) while holding others fixed.
+
+\begin{table}[t]
+\centering
+\caption{Capsule ablation on the FR3 arm. Each row varies one parameter from the default configuration. Worst-case metrics are across all 7 arm links.}
+\label{tab:capsule_ablation}
+\begin{tabular}{@{}lccrrrr@{}}
+\toprule
+Variant & Parameter change & Caps & Worst Dist (mm) & capV/aabb & r/binMed & Time (s)\\
+\midrule
+nsections\_2 & NSections=2 & 8 & 6.69 & 1.37 & 1.27 & 13.8 \\
+nsections\_4 & (default) & 10 & 10.23 & 1.47 & 1.50 & 33.0 \\
+nsections\_6 & NSections=6 & 10 & 2.34 & 1.32 & 1.32 & 21.0 \\
+nsections\_8 & NSections=8 & 11 & 1.20 & 1.56 & 1.46 & 21.2 \\
+\midrule
+mcpl\_1 & MaxCapsulesPerLink=1 & 8 & 10.21 & 1.33 & 1.31 & 14.7 \\
+mcpl\_4 & MaxCapsulesPerLink=4 & 10 & 10.23 & 1.47 & 1.50 & 32.6 \\
+mcpl\_8 & MaxCapsulesPerLink=8 & 10 & 10.23 & 1.47 & 1.50 & 32.4 \\
+mcpl\_16 & MaxCapsulesPerLink=16 & 10 & 10.23 & 1.47 & 1.50 & 32.5 \\
+\midrule
+adaptive\_true & AdaptiveCircleCount=true & 39 & 1.35 & 1.41 & 2.05 & 56.8 \\
+\midrule
+mrbr\_disabled & MaxRadiusBinRatio=-1 & 10 & 10.23 & 1.47 & 1.50 & 12.6 \\
+\midrule
+mesh\_collision & mesh source=collision & 10 & 10.23 & 1.47 & 1.50 & 32.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{NSections is the dominant control parameter.}
+Increasing the section count from 2 to 8 reduces the worst-case uncovered distance from 6.69~mm to 1.20~mm (5.6$\times$ improvement) at the cost of raising the capsule count from 8 to 11 and increasing \texttt{capV/aabb} from 1.37 to 1.56.
+However, the relationship is not monotonic: the default configuration (NSections=4) exhibits a \emph{worse} worst-case uncovered distance (10.23~mm) than NSections=2 (6.69~mm), because the 4-section fit splits link0 into two capsules, creating a coverage gap at the split boundary.
+At NSections=8, this gap nearly disappears (9~$\mu$m residual on link0).
+
+\textbf{MaxCapsulesPerLink plateaus.}
+Values above 4 all produce identical output (10 capsules total, same metrics), indicating that the split logic's improvement threshold (\texttt{MinSplitVolumeImprovement}=0.005) rejects additional capsules as not beneficial regardless of budget.
+The budget is therefore not binding at the default value of 12 on this robot.
+
+\textbf{AdaptiveCircleCount} enables per-section multi-circle fitting, which dramatically increases the capsule count from 10 to 39 (3.9$\times$) and runtime from 33~s to 57~s.
+The worst-case uncovered distance improves from 10.23~mm to 1.35~mm (7.6$\times$), but the radius-inflation metric \texttt{r/binMed} spikes to 2.05 on link2, indicating significant axial radius variation within individual capsules.
+
+\textbf{MaxRadiusBinRatio} set to --1 (disabling all splitting) produces metrics identical to the default configuration in which the ratio is active at 1.45.
+This confirms that the other pipeline mechanisms (COA threshold, \texttt{MinSplitVolumeImprovement}) already prevent excessive radius variation before \texttt{MaxRadiusBinRatio} becomes the active constraint, at least at this threshold value.
+
+\textbf{Mesh source} (visual vs.\ collision) produces identical capsule fits on the FR3, suggesting that the collision meshes (simplified convex envelopes) capture the same geometric structure as the visual meshes for this robot.
+This finding may not generalize to robots with greater divergence between visual and collision mesh representations.
+
+\textbf{No configuration achieves full coverage on all arm links.}
+Every variant leaves at least one link with a positive worst-case signed distance, confirming that the coverage-tightness trade-off is fundamental to the capsule representation.
+
+% ---- G. Summary ----
+\subsection{Summary of Findings}
+
+The experiments yield the following key findings:
+\begin{enumerate}
+    \item Convex mode is fastest (0.5~s) and guarantees coverage, but produces only mesh-based output.
+    \item Sphere-tree modes provide 8--63 primitives; the single-sphere preset offers near-perfect coverage at minimal primitive count but the default tree does not guarantee enclosure.
+    \item Capsule modes deliver 8--11 primitives with quantifiable tightness (\texttt{capV/aabb} 1.32--1.56, \texttt{r/binMed} 1.27--1.50).
+    \item \texttt{NSections} is the dominant capsule-tuning parameter, improving worst-case coverage from 6.7~mm to 1.2~mm as section count increases from 2 to 8.
+    \item \texttt{AdaptiveCircleCount} dramatically increases capsule count (3.9$\times$) but introduces radius inflation.
+    \item No analytic-primitive mode achieves full coverage on all links --- this is a fundamental limitation of the representation.
+\end{enumerate}
+
+All experimental data, configuration files, and generated figures are stored in the artifact directories corresponding to each experiment request.

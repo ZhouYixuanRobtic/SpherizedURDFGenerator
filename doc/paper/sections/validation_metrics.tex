@@ -1,0 +1,71 @@
+% ============================================================
+% V. VALIDATION METRICS AND TUNING
+% ============================================================
+\section{Validation Metrics and Tuning}
+\label{sec:metrics}
+
+To allow users to evaluate and compare approximation quality quantitatively, the toolchain defines a set of per-link and aggregate metrics.
+These metrics are computed by the \texttt{validate} CLI command and serve both as diagnostic tools during parameter tuning and as pass/fail gates in automated pipelines.
+
+% ---- A. Coverage Metrics ----
+\subsection{Coverage}
+
+\paragraph{Coverage boolean.}
+The most fundamental requirement is that every mesh vertex lies within at least one capsule.
+The \texttt{all\_covered} flag is \texttt{true} when $\max_i \mathrm{signed\_distance}_i \leq \epsilon$, where $\mathrm{signed\_distance}_i$ is the signed distance from vertex $\mathbf{v}_i$ to its nearest capsule (negative when inside).
+
+\paragraph{Worst signed distance.}
+When coverage is not achieved, the worst (most positive) signed distance identifies the maximum uncovered gap.
+This metric is useful for diagnosing which link or region is under-covered.
+
+% ---- B. Volume and Tightness Metrics ----
+\subsection{Volume and Tightness}
+
+\paragraph{Capsule union volume (capV).}
+The union volume of all capsules in a link is estimated via Monte Carlo sampling.
+The bounding box of the capsule set is uniformly sampled on a regular grid with \texttt{UnionVolumeSamplesPerAxis} per dimension (default 32, giving approximately 32,768 samples).
+Each sample point is classified as inside or outside the capsule union, and the volume is estimated as:
+\begin{equation}
+\mathrm{capV} = \mathrm{vol}(\mathrm{AABB}) \cdot \frac{|\{\text{samples inside}\}|}{|\{\text{total samples}\}|}.
+\label{eq:capv}
+\end{equation}
+
+\paragraph{CapV/AABB ratio.}
+The capsule union volume normalized by the link's axis-aligned bounding box volume:
+\begin{equation}
+\mathrm{capV/aabb} = \frac{\mathrm{capV}}{\mathrm{vol}(\mathrm{AABB})}.
+\end{equation}
+Values close to 1.0 indicate that the capsule set fills the link's extent efficiently; values significantly above 1.0 suggest excessive over-coverage.
+
+\paragraph{Radius-to-median-bin ratio ($r/\mathrm{binMed}$).}
+Along each capsule axis, vertices are binned into ten equal-length segments.
+For each bin, the maximum perpendicular distance of assigned vertices to the capsule axis is recorded.
+The median of these bin-maximum distances ($\mathrm{binMed}$) characterizes the typical surface offset.
+The ratio $r / \mathrm{binMed}$ measures how much the capsule radius is inflated beyond the typical radial extent of its assigned vertices.
+High values indicate that a single capsule bridges a tapered or irregular shape that could benefit from splitting.
+
+% ---- C. Primitive Count ----
+\subsection{Primitive Count}
+
+The total number of primitives---spheres, capsules, or convex meshes---provides a compactness measure.
+The \texttt{primitive\_count} field in \texttt{GenerateResult} reports the total count across all links.
+For capsule mode, this is the total number of capsules (each decomposed into three URDF elements but counted as one analytic primitive).
+
+% ---- D. Configuration Parameters ----
+\subsection{Configuration Parameters}
+
+The quality of capsule approximations is controlled through a set of YAML-configurable parameters:
+
+\begin{itemize}
+    \item \texttt{NSections} (default 4): Number of axial slicing planes. Higher values capture finer cross-section variation but increase computational cost and may produce more capsules.
+    \item \texttt{MaxCapsulesPerLink} (default 12): Hard upper bound on the number of capsules per link. The pipeline prunes capsules to meet this budget while minimizing volume increase.
+    \item \texttt{CoaThreshold} (default 0.005): Circle-outside-area threshold for adaptive circle fitting. Lower values force tighter circle fits at the cost of more circles per section.
+    \item \texttt{MaxCirclesPerSection} (default 1): Maximum circles fitted to a single cross-section. Values > 1 allow multi-lobed sections to be covered by multiple circles.
+    \item \texttt{AdaptiveCircleCount} (default false): When enabled, the number of circles per section is determined adaptively by the COA threshold rather than fixed at \texttt{MaxCirclesPerSection}.
+    \item \texttt{MaxRadiusBinRatio} (default 1.45): Triggers capsule splitting when $r/\mathrm{binMed}$ exceeds this value. Set to $-1$ to disable splitting.
+    \item \texttt{MaxCapVAabbRatio} (default $-1.0$): Triggers capsule splitting when $\mathrm{capV/aabb}$ exceeds this value. Negative values (default $-1.0$) disable the constraint entirely.
+    \item \texttt{MinSplitVolumeImprovement} (default 0.005): Minimum relative volume reduction required to accept a capsule split.
+    \item \texttt{UnionVolumeSamplesPerAxis} (default 32): Monte Carlo sampling resolution for capsule union volume estimation.
+\end{itemize}
+
+These parameters form the basis of the named presets---\texttt{single}, \texttt{default}, and \texttt{high\_detail} for capsule mode---which provide sensible starting points for different trade-off regimes between primitive count and approximation tightness.

@@ -195,6 +195,7 @@ Parse the Loop Triage table. Route:
 ### Stop Check
 
 All conditions met → status = complete, next_action = none:
+- **Review count $\ge 10$**: at least 10 reviewer passes have been completed (count the rows in the Reviews table in `state.md`). This is a hard floor — the reviewer must cold-read the full paper from scratch at least 10 times.
 - No blocking reviewer issues in latest review
 - No open implementation requests
 - **LaTeX compiles with exit code 0** (run `pdflatex -interaction=nonstopmode -halt-on-error main.tex` to verify)

@@ -1,0 +1,59 @@
+% ============================================================
+% VII. DISCUSSION
+% ============================================================
+\section{Discussion}
+\label{sec:discussion}
+
+% ---- A. Practical Trade-offs ----
+\subsection{When to Use Each Mode}
+
+The three approximation modes serve different use cases in the robotics pipeline.
+\textbf{Convex mode} produces the geometrically tightest approximation and is the best choice when the target simulator or collision checker handles convex meshes natively.
+It requires no parametric decomposition and preserves the mesh's convex envelope faithfully.
+However, it remains a mesh representation and does not admit the constant-time distance evaluation of analytic primitives.
+
+\textbf{Sphere mode} is well-suited to pipelines that exploit sphere algebra---GPU-based collision pipelines, signed-distance fields via sphere-sums, or planners that can use spherical bounding volume hierarchies.
+The medial tree produces multiple small spheres that can nestle into concave regions, often giving tighter overall coverage than capsules on shapes with deep concavities.
+The trade-off is higher primitive count: a typical sphere-tree approximation requires many more primitives than the equivalent capsule fit.
+
+\textbf{Capsule mode} is the best choice when smooth, low-count analytic primitives are desired.
+Capsules provide constant-time point-to-capsule distance, making them attractive for collision-atlas precomputation, swept-volume computation along trajectories, and analytical signed-distance fields for motion planning.
+The principal-axis sectioning assumption means that capsules are most effective on elongated, roughly tubular link geometries---precisely the shape of most robot arm links.
+
+% ---- B. URDF Compatibility ----
+\subsection{URDF Compatibility Constraint}
+
+A significant practical constraint is the absence of a native capsule element in the URDF specification.
+Our toolchain must decompose each capsule into a cylinder plus two spheres for the collision URDF, which introduces a subtle issue: a simulator loading the URDF reconstructs the collision shape as three separate collision primitives rather than as a single capsule.
+This means the simulator does not benefit from the capsule's analytic distance function.
+The JSON sidecar addresses this limitation by storing the canonical capsule parameters separately, but bridging the gap between URDF-compatible emission and analytic usability requires downstream support for reading the sidecar.
+
+The broader implication is that the robotics community would benefit from extending URDF (or its successor formats) to include a standard capsule primitive.
+Until such an extension is adopted, toolchains like ours must maintain dual outputs.
+
+% ---- C. Coverage vs. Tightness ----
+\subsection{Coverage vs. Tightness Trade-off}
+
+The requirement that every mesh vertex be covered by at least one capsule (conservative coverage) creates an inherent tension with tightness.
+A single capsule covering an entire link is always guaranteed to exist (the bounding capsule), but it may have significant excess volume.
+Splitting the link into multiple capsules reduces the excess volume at the cost of increased primitive count.
+
+Our splitting strategy---guided by the $r/\mathrm{binMed}$ ratio and $\mathrm{capV/aabb}$ ceiling---addresses this trade-off by selectively splitting only those capsules where the radius inflation indicates geometric inefficiency.
+This avoids over-splitting in regions where a single capsule is already tight.
+
+% ---- D. PCA Assumption ----
+\subsection{Limitation of PCA Sectioning}
+
+The principal-axis sectioning approach makes a strong assumption about link geometry: that each link has a clear longest axis along which capsules should be oriented.
+While this holds for standard manipulator links, it may perform poorly on highly branched, flat, or spherical geometry.
+For such links, alternative axis selection strategies (e.g., fitting multiple axis orientations or using a volumetric decomposition before capsule fitting) could improve results.
+Additionally, the PCA axis captures only the global elongation; locally curved links may benefit from curved capsule chains or articulated capsule hierarchies.
+
+% ---- E. Reproducibility ----
+\subsection{Reproducibility and Practical Use}
+
+The toolchain emphasizes reproducible execution through deterministic random seeds, fixed preset definitions, and Docker packaging.
+The built-in validation gates allow users to define acceptance criteria for approximation quality (e.g., ``$\mathrm{capV/aabb} < 2.5$ for all links'') and check them programmatically via the \texttt{validate} and \texttt{compare} CLI commands.
+
+For users who need to tune beyond the named presets, the YAML configuration system provides fine-grained control over all fitting parameters.
+The recommended workflow is to start with the \texttt{default} preset, inspect the metrics via \texttt{validate}, adjust parameters iteratively, and use \texttt{compare} to verify that the candidate preset improves upon the baseline.
