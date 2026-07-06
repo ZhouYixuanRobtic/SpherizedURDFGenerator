@@ -29,6 +29,21 @@ Our toolchain must decompose each capsule into a cylinder plus two spheres for t
 This means the simulator does not benefit from the capsule's analytic distance function.
 The JSON sidecar addresses this limitation by storing the canonical capsule parameters separately, but bridging the gap between URDF-compatible emission and analytic usability requires downstream support for reading the sidecar.
 
+As a minimal integration example, the sidecar can be consumed in a few lines of Python:
+\begin{verbatim}
+import json
+
+with open("output_sidecar.json") as f:
+    sidecar = json.load(f)
+
+for link_name, capsules in sidecar["capsules"].items():
+    for cap in capsules:
+        p0, p1, r = cap["p0"], cap["p1"], cap["radius"]
+        # p0, p1 are 3D endpoints; r is the capsule radius
+        # Evaluate point-to-capsule distance:
+        # d = max(0, distance_to_segment(query, p0, p1) - r)
+\end{verbatim}
+
 The broader implication is that the robotics community would benefit from extending URDF (or its successor formats) to include a standard capsule primitive.
 Until such an extension is adopted, toolchains like ours must maintain dual outputs.
 
