@@ -11,7 +11,7 @@ URDFApproxGeom: Automatic Primitive Collision Approximation for Robot URDF Model
 Robot URDF models often rely on mesh collision geometry that is expensive, inconsistent across simulators, or manually simplified. This work presents an automatic toolchain that converts mesh-based URDF collision or visual geometry into lightweight convex, sphere-tree, and especially capsule-based analytic approximations, while preserving URDF compatibility and exporting sidecar primitive parameters for downstream analytic collision and distance workflows.
 
 **Academic anchor:**  
-The paper should center on **automatic capsule primitive fitting** as the main contribution. Convex hull and sphere-tree outputs provide useful baselines and system completeness, but the distinct research narrative is the capsule pipeline: it converts robot link meshes into low-count, smooth, closed-form primitives through cross-section decomposition, coverage-preserving growth, tightness-guided splitting, and URDF-compatible emission.
+The paper should center on URDFApproxGeom as a practical, reproducible URDF-to-primitive approximation toolchain. Capsule fitting remains the most distinctive mode, but the manuscript must not present the cross-section capsule fitting idea as a new theory. The defensible contribution is the integration of capsule, sphere, and convex outputs into a URDF-compatible workflow with JSON sidecar parameters, validation metrics, and artifact-backed empirical characterization.
 
 **Tone constraint:**  
 Position the work as a practical, reproducible geometry-processing tool for robotics. Do not claim state-of-the-art accuracy, speed, or generality without experimental artifacts.
@@ -182,7 +182,7 @@ Goal: One compact paragraph plus optional contribution sentence.
 Include:
 - Problem: robot URDF collision geometry is often mesh-heavy or manually simplified.
 - Solution: automatic conversion into convex, sphere-tree, and capsule primitives.
-- Core method: capsule fitting by cross-section decomposition and coverage-preserving refinement.
+- Core method: capsule fitting by cross-section decomposition and coverage-evaluated refinement.
 - Output value: URDF-compatible collision models plus JSON primitive parameters.
 - Evidence placeholder: mention evaluation only after artifacts exist.
 
@@ -202,7 +202,7 @@ Narrative order:
 
 Contribution bullets:
 - A URDF-to-primitive approximation pipeline that preserves visual/inertial/joint structure while replacing collision geometry.
-- A capsule fitting pipeline that produces coverage-preserving, low-count analytic primitives and exports their closed-form parameters.
+- A capsule fitting pipeline that produces coverage-evaluated, low-count analytic primitives and exports their closed-form parameters.
 - A reproducible CLI/Python workflow with presets, validation metrics, comparison gates, and visualization bundles.
 - An experimental protocol for evaluating coverage, tightness, primitive count, runtime, and preset sensitivity. Convert to a results contribution only after artifacts exist.
 
@@ -297,7 +297,7 @@ Possible notation:
 - Shrink endpoint spans while preserving coverage.
 - Remove nested/degenerate redundant capsules.
 - If tightness constraints apply, split inflated capsules based on assigned vertices and accept only improvements that reduce the targeted metric.
-- Respect `MaxCapsulesPerLink` by pruning with coverage-preserving candidate selection.
+- Respect `MaxCapsulesPerLink` by pruning with coverage-evaluated candidate selection.
 
 #### 4.7 URDF-Compatible Emission
 - URDF has no native capsule element.
@@ -409,7 +409,7 @@ Limitations:
 
 Restate:
 - The paper presents an integrated URDF primitive approximation toolchain.
-- The main method automatically fits coverage-preserving capsule primitives from robot link meshes.
+- The main method automatically fits coverage-evaluated capsule primitives from robot link meshes.
 - The outputs are immediately usable in URDF-compatible toolchains and reusable as analytic primitive JSON.
 - Future work: broader robot benchmarks, more topology-aware capsule decomposition, direct support for more robot description formats, tighter integration with collision-checking libraries.
 
@@ -515,3 +515,15 @@ Before asking reviewer to review a draft, check:
 - Are limitations explicit enough to prevent overclaiming?
 - Does the paper explain why JSON sidecars matter beyond URDF emission?
 - Are terms consistent across sections?
+
+## Gatekeeper Revision Additions (2026-07-06)
+
+### New Evidence Map Rows
+
+| Experiments / metrics | Surface-sampled coverage beyond vertex-only checks | needs artifact | implement | `surface-coverage-metrics` |
+| Experiments / limitations | PCA-section capsule fitting works best for elongated links and degrades on branched or flat shapes | needs artifact | implement | `synthetic-morphology-benchmark` |
+| Experiments / downstream utility | Sidecar analytic primitives support fast point-distance evaluation | needs artifact | implement | `distance-query-benchmark` |
+
+### Related-Work Rule
+
+The revised paper must avoid broad "no existing tool" language. Any novelty statement must be scoped to the combination of URDF-compatible generation, capsule sidecar export, validation gates, and the specific implementation released in this repository.
