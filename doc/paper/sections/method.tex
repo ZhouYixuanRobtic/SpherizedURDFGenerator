@@ -105,10 +105,10 @@ Chains that fail to match terminate.
 
 After all sections are processed, endpoint sections are extended to the mesh axial extrema $\mathbf{v} \cdot \mathbf{u}$ to ensure coverage at the link extremities.
 
-% ---- F. Coverage-Preserving Refinement ----
-\subsection{Coverage-Preserving Refinement}
+% ---- F. Coverage-Aware Refinement ----
+\subsection{Coverage-Aware Refinement}
 
-The initial capsules undergo a series of refinement passes that jointly improve tightness while preserving coverage.
+The initial capsules undergo a series of refinement passes that jointly improve tightness while preserving or improving measured vertex-sample coverage.
 
 \paragraph{Merging and growth.}
 Approximately collinear adjacent capsules (axial dot product $> 0.3$, radius difference $< 15\%$) are merged into a single capsule spanning the full extent. Each vertex is assigned to its nearest capsule by point-to-segment distance, and radii are expanded to cover all assigned vertices, ensuring \Cref{eq:vertex_coverage}.

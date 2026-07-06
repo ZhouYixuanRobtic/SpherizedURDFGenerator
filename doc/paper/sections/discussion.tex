@@ -8,15 +8,15 @@
 \subsection{When to Use Each Mode}
 
 The three approximation modes serve different use cases in the robotics pipeline.
-\textbf{Convex mode} produces the geometrically tightest approximation and is the best choice when the target simulator or collision checker handles convex meshes natively.
+\textbf{Convex mode} produces the geometrically tightest mesh-based vertex-enclosing approximation and is appropriate when the target simulator or collision checker handles convex meshes natively.
 It requires no parametric decomposition and preserves the mesh's convex envelope faithfully.
 However, it remains a mesh representation and does not admit the constant-time distance evaluation of analytic primitives.
 
 \textbf{Sphere mode} is well-suited to pipelines that exploit sphere algebra---GPU-based collision pipelines, signed-distance fields via sphere-sums, or planners that can use spherical bounding volume hierarchies.
-The medial tree produces multiple small spheres that can nestle into concave regions, often giving tighter overall coverage than capsules on shapes with deep concavities.
+The medial tree produces multiple small spheres that can nestle into localized concave regions, but coverage on such morphology must be validated per robot.
 The trade-off is higher primitive count: a typical sphere-tree approximation requires many more primitives than the equivalent capsule fit.
 
-\textbf{Capsule mode} is the best choice when smooth, low-count analytic primitives are desired.
+\textbf{Capsule mode} is appropriate when smooth, low-count analytic primitives are desired.
 Capsules provide constant-time point-to-capsule distance, making them attractive for collision-atlas precomputation, swept-volume computation along trajectories, and analytical signed-distance fields for motion planning.
 These analytic primitives support constant-time collision distance evaluation, making them suitable for collision-checking in motion planning (e.g., via FCL~\cite{pan2012fcl} or OMPL), real-time simulation, and differentiable collision pipelines.
 The principal-axis sectioning assumption means that capsules are most effective on elongated, roughly tubular link geometries---precisely the shape of most robot arm links.

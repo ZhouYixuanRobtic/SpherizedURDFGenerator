@@ -41,7 +41,7 @@ Two presets are provided: \emph{single} (one bounding sphere per link) and \emph
 Capsule mode is the primary contribution of this work and is described in detail in Section~\ref{sec:method}.
 Each capsule is emitted in the URDF as one \texttt{<cylinder>} element (the body) plus two \texttt{<sphere>} elements (the hemispherical end caps), since URDF has no native capsule element.
 The JSON sidecar stores the canonical representation---per-link \texttt{capsules} arrays with \texttt{p0}, \texttt{p1}, and \texttt{radius}---so downstream users can evaluate the analytic capsule directly without reconstructing it from the decomposed URDF primitives.
-Three named presets are available: \emph{single} (one conservative capsule per link), \emph{default} (recommended low-count fit), and \emph{high\_detail} (more axial sections and larger capsule budget).
+Three named presets are available: \emph{single} (one coarse capsule per link), \emph{default} (recommended low-count fit), and \emph{high\_detail} (more axial sections and larger capsule budget).
 
 % ---- C. Python and CLI Interface ----
 \subsection{Interface}
