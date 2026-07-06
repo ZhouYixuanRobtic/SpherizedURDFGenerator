@@ -174,14 +174,23 @@ Spawn an implement agent:
 
 ### Reviewer Pass (status: awaiting_review)
 
+**CRITICAL: Every reviewer pass is a cold re-read.** The reviewer must approach the paper as if reading it for the first time. Never frame it as a "verification pass" or "check if previous issues were fixed."
+
 Spawn a reviewer agent:
 - Use the Agent tool with subagent_type "general-purpose"
-- Prompt: read `doc/paper/prompt/reviewer.md` for role instructions, then review all files in `doc/paper/` (main.tex, sections/*.tex, ref.bib, artifacts/*/RESULT.md)
+- Prompt: read `doc/paper/prompt/reviewer.md` for role instructions, then review all files in `doc/paper/` (main.tex, sections/*.tex, ref.bib, artifacts/*/RESULT.md, outline.md)
+- **Do NOT give the reviewer previous review files.** The reviewer reads only the paper, outline, artifacts, and state.md. Prior reviews are deliberately withheld so every pass is a fresh cold read.
+- **Do NOT tell the reviewer what issues to look for.** Do not mention "verification," "check if X was fixed," or reference any prior issue ID. The prompt to the reviewer agent should be generic: "Review the complete paper draft. Read all sections, artifacts, and outline. Write your review to doc/paper/reviews/review_iter_<n>.md."
 - Reviewer writes `doc/paper/reviews/review_iter_<n>.md` with Loop Triage table
-- After reviewer returns: read the review, count blocking issues and implement_required issues
-- Update state.md reviews table
+- After reviewer returns:
+  1. Read the new review yourself (the coordinator)
+  2. Count blocking issues and implement_required issues
+  3. **Cross-check against previous review**: read the most recent prior review. If any issue from the prior review appears again in the new review (same finding, same location), mark it as a **persistent issue**. If the same issue appears in 2 consecutive reviews → status = blocked, next_action = user (see Safety Rules)
+  4. Update state.md reviews table
 - If blocking issues → status = revising, next_action = writer (or implement if implement_required). Determine by reading triage table: if any owner=implement and blocking=yes → next_action = implement; else next_action = writer
 - If no blocking issues → check stop conditions
+
+**Why cold re-read matters:** A reviewer who knows what was "supposed" to be fixed will only verify those fixes, missing new issues and systemic problems. Ten cold re-reads by a reviewer who has never seen the paper before is the only way to converge on a polished draft.
 
 ### Triage (internal step, part of revising)
 
@@ -221,7 +230,7 @@ Agent tool:
     - Current draft: doc/paper/main.tex, doc/paper/sections/*.tex (Read what exists)
     - Open requests: doc/paper/requests/*.md
     - Existing artifacts: doc/paper/artifacts/*/RESULT.md
-    - Last review: doc/paper/reviews/review_iter_<n-1>.md (if exists)
+    <for writer and implement only:>- Last review: doc/paper/reviews/review_iter_<n-1>.md (if exists)
 
     ## Current Task
     <specific instruction based on current state — see per-state instructions above>
@@ -230,6 +239,11 @@ Agent tool:
 ```
 
 **Important:** Before spawning any agent, Read the relevant prompt file(s) so you can inline their content into the agent prompt.
+
+**Reviewer-specific rules:**
+- Never pass `review_iter_<n-1>.md` to the reviewer agent. The reviewer must cold-read the paper without knowledge of prior reviews.
+- The reviewer's task description must be generic: "Review the complete paper draft. Read all sections, artifacts, and outline. Write your review to doc/paper/reviews/review_iter_<n>.md."
+- Do not mention prior issue IDs, "verification," or "check if X was fixed" in the reviewer prompt.
 
 ## File Writing Convention
 
