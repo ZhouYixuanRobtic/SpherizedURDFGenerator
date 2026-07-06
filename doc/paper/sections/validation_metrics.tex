@@ -10,13 +10,8 @@ These metrics serve both as diagnostic tools during parameter tuning and as pass
 % ---- A. Coverage Metrics ----
 \subsection{Coverage}
 
-\paragraph{Coverage boolean.}
-The most fundamental requirement is that every mesh vertex lies within at least one capsule.
-Coverage is satisfied when $\max_i \mathrm{signed\_distance}_i \leq \epsilon$, where $\mathrm{signed\_distance}_i$ is the signed distance from vertex $\mathbf{v}_i$ to its nearest capsule (negative when inside).
-
-\paragraph{Worst signed distance.}
-When coverage is not achieved, the worst (most positive) signed distance identifies the maximum uncovered gap.
-This metric is useful for diagnosing which link or region is under-covered.
+\paragraph{Coverage.}
+Coverage is satisfied when every mesh vertex lies inside at least one capsule: $\max_i \mathrm{signed\_distance}_i \leq \epsilon$, where negative values indicate the vertex is inside a capsule. The worst (most positive) signed distance quantifies the maximum uncovered gap when coverage is not achieved.
 
 % ---- B. Volume and Tightness Metrics ----
 \subsection{Volume and Tightness}
@@ -31,11 +26,7 @@ Each sample point is classified as inside or outside the capsule union, and the 
 \end{equation}
 
 \paragraph{CapV/AABB ratio.}
-The capsule union volume normalized by the link's axis-aligned bounding box volume:
-\begin{equation}
-\mathrm{capV/aabb} = \frac{\mathrm{capV}}{\mathrm{vol}(\mathrm{AABB})}.
-\end{equation}
-Values close to 1.0 indicate that the capsule set fills the link's extent efficiently; values significantly above 1.0 suggest excessive over-coverage.
+The capsule union volume normalized by the link's AABB volume, $\mathrm{capV/aabb} = \mathrm{capV} / \mathrm{vol}(\mathrm{AABB})$. Values near 1.0 indicate efficient fill; values well above 1.0 signal excessive over-coverage.
 
 \paragraph{Radius-to-median-bin ratio ($r/\mathrm{binMed}$).}
 Along each capsule axis, vertices are binned into ten equal-length segments.
@@ -53,30 +44,21 @@ For capsule mode, each capsule is counted as one analytic primitive despite bein
 % ---- D. Configuration Parameters ----
 \subsection{Configuration Parameters}
 
-The capsule fitting pipeline exposes a small number of tunable parameters that control the trade-off between primitive count and approximation tightness.
-These parameters are grouped by their role in the pipeline.
+The capsule pipeline exposes a small number of parameters controlling the primitive-count/tightness trade-off:
 
 \paragraph{Sectioning.}
-The number of axial slicing planes, denoted $N$ (default $N = 4$), controls the resolution at which cross-sectional geometry is captured.
-Higher values produce finer axial sampling at increased computational cost and may yield additional capsules.
-Typical values range from 2 (coarse) to 8 (fine).
+$N$ (default 4): number of axial slicing planes. Higher values produce finer axial sampling; typical range 2--8.
 
 \paragraph{Circle fitting.}
-Per-section circle quality is governed by the circle-outside-area threshold $\tau_{\mathrm{coa}}$ (default $5 \times 10^{-3}$), which bounds the acceptable area of each fitted circle lying outside the contour polygon.
-When adaptive circle fitting is enabled, the pipeline incrementally adds circles until the total COA per section falls below $\tau_{\mathrm{coa}}$, up to a per-section maximum $M$ (default $M = 1$).
-With adaptive fitting disabled, exactly $M$ circles are fitted per section using deterministic farthest-point initialization and $k$-means clustering.
+$\tau_{\mathrm{coa}}$ (default $5 \times 10^{-3}$): circle-outside-area threshold. When adaptive fitting is enabled, circles are added iteratively until total COA falls below $\tau_{\mathrm{coa}}$, up to a per-section maximum $M$ (default 1). With adaptive fitting disabled, exactly $M$ circles are fitted per section via farthest-point initialization and $k$-means.
 
 \paragraph{Capsule budget.}
-The per-link capsule budget $K_{\max}$ (default $K_{\max} = 12$) provides a hard upper bound.
-When the initial capsule count exceeds $K_{\max}$, the pipeline iteratively removes the capsule whose deletion minimizes the resulting union volume, re-growing remaining capsules to preserve coverage after each removal.
+$K_{\max}$ (default 12): hard per-link capsule limit. Excess capsules are removed by minimal-volume-impact deletion with re-growth.
 
 \paragraph{Splitting.}
-Capsules that bridge tapered or irregular geometry are detected through two metrics.
-The radius-inflation ratio $\rho = r / \mathrm{binMed}$ triggers a split when it exceeds a threshold $\rho_{\max}$ (default 1.45); setting $\rho_{\max} = -1$ disables radius-based splitting.
-The volume ratio $\eta = \mathrm{capV} / \mathrm{vol}(\mathrm{AABB})$ triggers a split when it exceeds $\eta_{\max}$; negative values (default $-1$) disable volume-based splitting.
-A split is accepted only when the resulting capsule pair reduces the affected union volume by at least $\delta_{\min} = 5 \times 10^{-3}$ in relative terms.
+$\rho_{\max}$ (default 1.45): radius-inflation split threshold ($\rho_{\max} = -1$ disables). $\eta_{\max}$ (default $-1$, disabled): volume-ratio split trigger. Splits accepted only when reducing union volume by at least $\delta_{\min} = 5 \times 10^{-3}$.
 
 \paragraph{Volume estimation.}
-Monte Carlo estimation of capsule union volume uses $S$ samples per axis (default $S = 32$), yielding approximately $S^3$ total sample points.
+$S$ (default 32): Monte Carlo samples per axis ($S^3$ total points).
 
-These parameters define the three named presets---\emph{single} ($N = 2$, $K_{\max} = 1$), \emph{default} ($N = 4$, $K_{\max} = 12$, $\rho_{\max} = 1.45$), and \emph{high\_detail} ($N = 6$, $K_{\max} = 16$), providing sensible starting points for different trade-off regimes.
+Three named presets provide sensible starting points: \emph{single} ($N = 2$, $K_{\max} = 1$), \emph{default} ($N = 4$, $K_{\max} = 12$, $\rho_{\max} = 1.45$), and \emph{high\_detail} ($N = 6$, $K_{\max} = 16$).

@@ -33,28 +33,13 @@ The broader implication is that the robotics community would benefit from extend
 Until such an extension is adopted, toolchains like ours must maintain dual outputs.
 
 % ---- C. Coverage vs. Tightness ----
-\subsection{Coverage vs. Tightness Trade-off}
+\subsection{Coverage--Tightness Trade-off and Limitations}
 
-The requirement that every mesh vertex be covered by at least one capsule (conservative coverage) creates an inherent tension with tightness.
-A single capsule covering an entire link is always guaranteed to exist (the bounding capsule), but it may have significant excess volume.
-Splitting the link into multiple capsules reduces the excess volume at the cost of increased primitive count.
+Conservative coverage---requiring every mesh vertex to lie inside at least one capsule---creates inherent tension with tightness. Our splitting strategy, guided by $r/\mathrm{binMed}$ and $\mathrm{capV/aabb}$, selectively splits capsules where radius inflation indicates geometric inefficiency, avoiding over-splitting in tight regions.
 
-Our splitting strategy---guided by the $r/\mathrm{binMed}$ ratio and $\mathrm{capV/aabb}$ ceiling---addresses this trade-off by selectively splitting only those capsules where the radius inflation indicates geometric inefficiency.
-This avoids over-splitting in regions where a single capsule is already tight.
-
-% ---- D. PCA Assumption ----
-\subsection{Limitation of PCA Sectioning}
-
-The principal-axis sectioning approach makes a strong assumption about link geometry: that each link has a clear longest axis along which capsules should be oriented.
-While this holds for standard manipulator links, it may perform poorly on highly branched, flat, or spherical geometry.
-For such links, alternative axis selection strategies (e.g., fitting multiple axis orientations or using a volumetric decomposition before capsule fitting) could improve results.
-Additionally, the PCA axis captures only the global elongation; locally curved links may benefit from curved capsule chains or articulated capsule hierarchies.
+The principal-axis sectioning approach assumes each link has a clear longest axis for capsule orientation. While this holds for standard manipulator links, it may perform poorly on branched, flat, or spherical geometry. Additionally, PCA captures only global elongation; locally curved links may benefit from curved capsule chains or articulated capsule hierarchies.
 
 % ---- E. Reproducibility ----
-\subsection{Reproducibility and Practical Use}
+\subsection{Reproducibility}
 
-The toolchain emphasizes reproducible execution through deterministic random seeds, fixed preset definitions, and Docker packaging.
-The built-in validation gates allow users to define acceptance criteria for approximation quality (e.g., ``$\mathrm{capV/aabb} < 2.5$ for all links'') and check them programmatically.
-
-For users who need to tune beyond the named presets, the YAML configuration system provides fine-grained control over all fitting parameters.
-The recommended workflow starts from the default configuration, proceeds through iterative metric inspection and parameter adjustment, and verifies improvement against the baseline at each step.
+The toolchain ensures reproducible execution through deterministic random seeds, fixed presets, and a containerized pipeline. Validation gates accept user-defined quality criteria (e.g., $\mathrm{capV/aabb} < 2.5$) for automated pass/fail checking.

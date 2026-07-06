@@ -7,18 +7,6 @@
 This section presents an experimental evaluation of the toolchain on the Franka FR3 robot arm.
 
 % ---- A. Research Questions ----
-\subsection{Research Questions}
-
-We define five research questions that guide the experimental design:
-
-\begin{itemize}
-    \item \textbf{RQ1 (Coverage):} Does the generated geometry preserve coverage of all robot link meshes across all modes and presets?
-    \item \textbf{RQ2 (Mode comparison):} How do convex, sphere, and capsule approximation modes trade off primitive count and geometric tightness on a representative robot model?
-    \item \textbf{RQ3 (Capsule ablation):} How sensitive is capsule quality to section count, capsule budget, adaptive circle fitting, and splitting thresholds?
-    \item \textbf{RQ4 (Runtime):} What computational cost does the full URDF approximation pipeline impose for each mode and preset?
-    \item \textbf{RQ5 (Mesh source):} How do visual-mesh and collision-mesh sources affect the fitting quality and metrics?
-\end{itemize}
-
 % ---- B. Dataset ----
 \subsection{Dataset}
 
@@ -95,22 +83,13 @@ Capsule & high\_detail & 10 & 1.32 & 1.32 & 21.8 \\
 }
 \end{table}
 
-\textbf{Convex mode} produces one convex hull per link (8 primitives total) and is the fastest configuration at 0.5~s.
-Because the convex hull encloses the original mesh vertices by construction, coverage is guaranteed.
-However, the output is mesh-based and does not admit the closed-form distance evaluation available for analytic primitives.
+\textbf{Convex mode} produces one convex hull per link (8 primitives) in 0.5~s. Coverage is guaranteed by construction, but the output is mesh-based and lacks closed-form distance evaluation.
 
-\textbf{Sphere-tree modes} trade primitive count against coverage tightness.
-The \emph{single} preset produces one sphere per link (8 total) with near-perfect coverage: only two links exhibit tens-of-micrometers uncovered vertices ($2\times 10^{-5}$~m worst-case).
-The \emph{default} preset generates 63 spheres across the 8 links but leaves all links with small uncovered regions (worst-case $1.8\times 10^{-2}$~m).
-This behavior is by design --- the sphere tree is a medial-axis approximation that places spheres to match the shape's interior, not to enclose all surface vertices.
+\textbf{Sphere-tree modes} trade primitive count against tightness. The \emph{single} preset (8 spheres) achieves near-perfect coverage ($2\times 10^{-5}$~m worst-case gap), while the \emph{default} preset (63 spheres) leaves all links with small uncovered regions (worst $1.8\times 10^{-2}$~m) by design — the medial-axis decomposition fits the shape interior, not the full surface.
 
-\textbf{Capsule modes} output 8--10 primitives with tightness quantified by the union-volume ratio $\mathrm{capV/aabb}$ (worst-case range 1.32--1.47 across presets) and the radius-inflation metric $r$/binMed (worst-case range 1.27--1.50).
-The \emph{high\_detail} preset achieves the best worst-case uncovered distance (2.3~mm) and a slightly lower $\mathrm{capV/aabb}$ (1.32 vs.\ 1.47 for default), while keeping the total primitive count at 10 with a slightly different per-link distribution.
-Runtime for capsule modes ranges from 12.7~s (single) to 33.0~s (default), with the \emph{high\_detail} preset completing in 21.8~s.
+\textbf{Capsule modes} produce 8--10 primitives with quantifiable tightness: $\mathrm{capV/aabb}$ ranges from 1.32 to 1.47 and $r$/binMed from 1.27 to 1.50 across presets. The \emph{high\_detail} preset achieves the best worst-case uncovered distance (2.3~mm). Runtime spans 12.7~s (\emph{single}) to 33.0~s (\emph{default}).
 
-A key finding is that \textbf{no analytic-primitive mode achieves complete (all-vertex) coverage on all arm links}.
-Only the convex mesh output guarantees full enclosure.
-Analytic primitives inevitably involve trade-offs between tightness and coverage, and the optimal configuration depends on the downstream application's tolerance for small uncovered regions.
+\textbf{No analytic-primitive mode achieves complete coverage on all links.} Only convex mesh output guarantees full enclosure; sphere and capsule modes inherently trade coverage for tightness.
 
 \begin{figure}[t]
 \centering
@@ -154,38 +133,14 @@ Collision mesh & Mesh source & 10 & 10.23 & 1.47 & 1.50 & 32.5 \\
 }
 \end{table}
 
-\textbf{Section count $N$ is the dominant control parameter.}
-Increasing the section count from 2 to 8 reduces the worst-case uncovered distance from 6.69~mm to 1.20~mm (5.6$\times$ improvement) at the cost of raising the capsule count from 8 to 11 and increasing $\mathrm{capV/aabb}$ from 1.37 to 1.56.
-However, the relationship is not monotonic: the default configuration ($N=4$) exhibits a \emph{worse} worst-case uncovered distance (10.23~mm) than $N=2$ (6.69~mm), because the 4-section fit splits one link into two capsules, creating a coverage gap at the split boundary.
-At $N=8$, this gap nearly disappears (to single-digit micrometers).
+\textbf{Section count $N$} is the dominant control parameter. Increasing $N$ from 2 to 8 reduces worst-case uncovered distance from 6.69~mm to 1.20~mm (5.6$\times$ improvement) at the cost of raising capsule count from 8 to 11 and $\mathrm{capV/aabb}$ from 1.37 to 1.56. The relationship is not monotonic: $N=4$ (10.23~mm worst) performs \emph{worse} than $N=2$ (6.69~mm) because the 4-section fit splits one link into two capsules, creating a coverage gap at the boundary. At $N=8$, this gap nearly disappears (to single-digit micrometers).
 
-\textbf{Per-link capsule budget $K_{\max}$ plateaus.}
-Values above 4 all produce identical output (10 capsules total, same metrics), indicating that the split logic's improvement threshold ($\delta_{\min} = 5 \times 10^{-3}$) rejects additional capsules as not beneficial regardless of budget.
-The budget is therefore not binding at the default value of 12 on this robot.
+\textbf{Per-link capsule budget $K_{\max}$} plateaus above 4: all configurations produce identical output (10 capsules, same metrics), indicating that the split-logic threshold $\delta_{\min} = 5 \times 10^{-3}$ rejects additional capsules as not beneficial.
 
-\textbf{Adaptive circle fitting} enables per-section multi-circle fitting, which dramatically increases the capsule count from 10 to 39 (3.9$\times$) and runtime from 33~s to 57~s.
-The worst-case uncovered distance improves from 10.23~mm to 1.35~mm (7.6$\times$), but the radius-inflation metric $r$/binMed spikes to 2.05 on one link, indicating significant axial radius variation within individual capsules.
+\textbf{Adaptive circle fitting} increases capsule count from 10 to 39 (3.9$\times$) and runtime from 33~s to 57~s. Worst-case uncovered distance improves from 10.23~mm to 1.35~mm (7.6$\times$), but $r$/binMed spikes to 2.05 on one link.
 
-\textbf{Radius-inflation control $\rho_{\max}$} set to --1 (disabling all splitting) produces metrics identical to the default configuration in which the ratio is active at 1.45.
-This confirms that the other pipeline mechanisms (COA threshold, $\delta_{\min}$) already prevent excessive radius variation before $\rho_{\max}$ becomes the active constraint, at least at this threshold value.
+\textbf{Radius-inflation control $\rho_{\max}$} set to --1 (disabling splitting) produces output identical to the default ($\rho_{\max}=1.45$), confirming that COA threshold and $\delta_{\min}$ already prevent excessive radius variation before $\rho_{\max}$ becomes active.
 
-\textbf{Mesh source} (visual vs.\ collision) produces identical capsule fits on the FR3, suggesting that the collision meshes (simplified convex envelopes) capture the same geometric structure as the visual meshes for this robot.
-This finding may not generalize to robots with greater divergence between visual and collision mesh representations.
+\textbf{Mesh source} (visual vs.\ collision) produces identical capsule fits on the FR3; this may not generalize to robots where collision and visual meshes diverge significantly.
 
-\textbf{No configuration achieves full coverage on all arm links.}
-Every variant leaves at least one link with a positive worst-case signed distance, confirming that the coverage-tightness trade-off is fundamental to the capsule representation.
-
-% ---- G. Summary ----
-\subsection{Summary of Findings}
-
-The experiments yield the following key findings:
-\begin{enumerate}
-    \item Convex mode is fastest (0.5~s) and guarantees coverage, but produces only mesh-based output.
-    \item Sphere-tree modes provide 8--63 primitives; the single-sphere preset offers near-perfect coverage at minimal primitive count but the default tree does not guarantee enclosure.
-    \item Capsule modes deliver 8--11 primitives with quantifiable tightness ($\mathrm{capV/aabb}$ 1.32--1.56, $r$/binMed 1.27--1.50).
-    \item The section count $N$ is the dominant capsule-tuning parameter, improving worst-case coverage from 6.7~mm to 1.2~mm as it increases from 2 to 8.
-    \item Adaptive circle fitting dramatically increases capsule count (3.9$\times$) but introduces radius inflation.
-    \item No analytic-primitive mode achieves full coverage on all links --- this is a fundamental limitation of the representation.
-\end{enumerate}
-
-All experimental data, configuration files, and generated figures are stored in the artifact directories corresponding to each experiment request.
+\textbf{No configuration achieves full coverage on all links---every variant leaves at least one link with a positive worst-case signed distance, confirming that the coverage-tightness trade-off is fundamental to the capsule representation.}

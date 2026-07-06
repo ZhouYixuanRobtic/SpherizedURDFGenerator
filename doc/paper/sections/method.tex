@@ -17,16 +17,10 @@ c = \{ \mathbf{x} \in \mathbb{R}^3 \mid d(\mathbf{x}, \overline{\mathbf{p}_0\mat
 \end{equation}
 where $d(\mathbf{x}, \overline{\mathbf{p}_0\mathbf{p}_1})$ is the Euclidean distance from $\mathbf{x}$ to the line segment $\overline{\mathbf{p}_0\mathbf{p}_1}$.
 
-The goal is to find a set of capsules $\mathcal{C} = \{c_1, \dots, c_k\}$ satisfying:
-\begin{align}
-&\text{Coverage:} \quad \forall \mathbf{v} \in V,\; \min_{c \in \mathcal{C}} d(\mathbf{v}, c) \leq 0, \label{eq:coverage}\\
-&\text{Compactness:} \quad k \leq K_{\max}, \label{eq:budget}\\
-&\text{Tightness:} \quad \text{minimize excess volume and radius inflation.} \label{eq:tightness}
-\end{align}
-
-Coverage (\Cref{eq:coverage}) requires every mesh vertex to lie inside at least one capsule.
-The primitive budget (\Cref{eq:budget}) limits the total number of capsules per link.
-Tightness (\Cref{eq:tightness}) is measured through a combination of capsule union volume relative to the link's axis-aligned bounding box (AABB) volume and a radius-inflation profile along each capsule's axis.
+The goal is to find a set of capsules $\mathcal{C} = \{c_1, \dots, c_k\}$ such that every mesh vertex lies inside at least one capsule (\Cref{eq:coverage}), the capsule count does not exceed a per-link budget $K_{\max}$, and excess volume and radius inflation are minimized.
+\begin{equation}
+\forall \mathbf{v} \in V,\; \min_{c \in \mathcal{C}} d(\mathbf{v}, c) \leq 0. \label{eq:coverage}
+\end{equation}
 
 Figure~\ref{fig:method_schematic} illustrates the full pipeline visually on a representative link: PCA axis computation, cross-section slicing, circle fitting, and the resulting capsule chain.
 
@@ -40,15 +34,7 @@ Figure~\ref{fig:method_schematic} illustrates the full pipeline visually on a re
 % ---- B. Mesh Preparation ----
 \subsection{Mesh Preparation and Frame Handling}
 
-Before fitting, the pipeline resolves the mesh source from the URDF.
-For the default visual-mesh source, any non-OBJ/STL visual meshes (e.g., COLLADA format files) are converted to OBJ format in a Python preprocessing step using Trimesh~\cite{trimesh}.
-The loaded mesh is then processed through ManifoldPlus~\cite{huang2022manifoldplus} to obtain a watertight manifold, which is required for robust cross-section slicing.
-The watertight mesh vertices are transformed from the mesh-local frame to the link frame using the origin transform specified in the URDF element (translation $\mathbf{T}$ and rotation matrix $R$):
-\begin{equation}
-\mathbf{v}^{\mathrm{lf}} = \mathbf{T} + R\,\mathbf{v}^{\mathrm{mesh}}.
-\end{equation}
-
-After fitting, the capsules are grown against the \emph{original} (non-manifold) mesh vertices in the link frame to guarantee coverage of the real collision surface, which may differ from the watertight approximation.
+Before fitting, the pipeline resolves the mesh source from the URDF. Non-OBJ/STL visual meshes are converted to OBJ format using Trimesh~\cite{trimesh}, then processed through ManifoldPlus~\cite{huang2022manifoldplus} to obtain a watertight manifold required for robust cross-section slicing. The mesh is transformed from the mesh-local frame to the link frame using the URDF origin transform ($\mathbf{v}^{\mathrm{lf}} = \mathbf{T} + R\,\mathbf{v}^{\mathrm{mesh}}$). After fitting, capsules are grown against the original (non-manifold) mesh vertices to guarantee coverage of the real collision surface.
 
 % ---- C. Principal-Axis Sectioning ----
 \subsection{Principal-Axis Sectioning}
@@ -122,18 +108,11 @@ After all sections are processed, endpoint sections are extended to the mesh axi
 
 The initial capsules undergo a series of refinement passes that jointly improve tightness while preserving coverage.
 
-\paragraph{Collinear merging.}
-Adjacent capsules that are approximately collinear (axial dot product $> 0.3$) and have similar radii (difference $< 15\%$) are merged into a single capsule spanning the full extent.
-This reduces the capsule count without affecting coverage.
-
-\paragraph{Radius growth (grow to cover).}
-Every mesh vertex is assigned to its nearest capsule by point-to-segment distance.
-Each capsule's radius is then expanded to at least the maximum distance of its assigned vertices, ensuring \Cref{eq:coverage} holds.
+\paragraph{Merging and growth.}
+Approximately collinear adjacent capsules (axial dot product $> 0.3$, radius difference $< 15\%$) are merged into a single capsule spanning the full extent. Each vertex is assigned to its nearest capsule by point-to-segment distance, and radii are expanded to cover all assigned vertices, ensuring \Cref{eq:coverage}.
 
 \paragraph{Endpoint span shrinkage.}
-Each capsule's axis endpoints $(\mathbf{p}_0, \mathbf{p}_1)$ are optimized by searching over candidate shrink amounts while re-computing the required coverage radius.
-The candidate that minimizes capsule volume while maintaining coverage is selected.
-This process is iterated until convergence.
+Capsule endpoints are optimized by searching over shrink amounts that minimize volume while maintaining coverage, iterated until convergence.
 
 \paragraph{Inflation-based splitting.}
 When a capsule exhibits excessive radius inflation---measured by the ratio $r / r_{\text{median\_bin}}$, where $r_{\text{median\_bin}}$ is the median of per-bin maximum vertex distances along the capsule axis---the pipeline attempts to split the capsule at the bin where inflation is worst.
@@ -142,16 +121,10 @@ A split is accepted only if it reduces the capsule union volume or improves the 
 Splitting is also triggered when the capsule union volume relative to the link AABB volume exceeds a configured ceiling $\eta_{\max}$.
 
 \paragraph{Nested-capsule pruning.}
-After refinement, capsules that are entirely contained within another capsule are removed.
-A capsule $c_i$ is nested in $c_j$ when both of $c_i$'s end-spheres (points $\mathbf{p}_0^i$ and $\mathbf{p}_1^i$, each inflated by $r_i$) lie within $c_j$, i.e.:
-\begin{equation}
-d(\mathbf{p}_0^i, \overline{\mathbf{p}_0^j\mathbf{p}_1^j}) + r_i \leq r_j \quad\text{and}\quad
-d(\mathbf{p}_1^i, \overline{\mathbf{p}_0^j\mathbf{p}_1^j}) + r_i \leq r_j.
-\end{equation}
-Since capsules are convex, this guarantees $c_i \subseteq c_j$, so removing $c_i$ does not affect coverage.
+Capsules whose end-spheres lie entirely within another capsule are removed; since capsules are convex, this does not affect coverage.
 
 \paragraph{Budget enforcement.}
-If after refinement the capsule count exceeds the per-link budget $K_{\max}$, the pipeline iteratively removes the capsule whose removal minimizes the resulting capsule union volume, re-growing the remaining capsules to maintain coverage after each removal.
+If the capsule count exceeds $K_{\max}$, capsules are iteratively removed in order of minimal volume impact, with remaining capsules re-grown after each removal.
 
 % ---- G. URDF-Compatible Emission ----
 \subsection{URDF-Compatible Emission}

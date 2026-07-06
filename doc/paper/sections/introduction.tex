@@ -5,23 +5,19 @@
 \label{sec:intro}
 
 % ---- 1. Problem context ----
-Robot simulation, motion planning, and control all depend on efficient collision geometry.
-A robot's collision model must be lightweight enough for real-time queries yet faithful enough to avoid missed collisions or excessive false positives.
-In the Robot Operating System (ROS) ecosystem, the Unified Robot Description Format (URDF)~\cite{urdf_doc} provides the standard representation, supporting both analytic primitives (spheres, cylinders, boxes) and triangular meshes.
-In practice, robot descriptions commonly carry high-detail visual meshes alongside simplified collision meshes or manually authored approximations, leading to representations that are either computationally expensive or inconsistently maintained.
+Robot simulation, motion planning, and control depend on efficient collision geometry that is lightweight enough for real-time queries yet faithful enough to avoid missed collisions.
+In the ROS ecosystem, URDF~\cite{urdf_doc} supports both analytic primitives (spheres, cylinders, boxes) and triangular meshes.
+In practice, robot descriptions carry high-detail visual meshes alongside simplified or manually authored collision approximations, yielding representations that are either computationally expensive or inconsistently maintained.
 
 % ---- 2. Existing practice -%
-Current practice for collision geometry authoring is largely manual.
-A robot designer may hand-place spheres or capsules inside a link mesh, simplify an existing mesh with a 3D modeling tool, or rely on a convex-hull decomposition pipeline.
-These approaches are time-consuming, hard to reproduce across different robots and simulators, and often produce collision models at an arbitrary level of detail.
-Several simulators and planning frameworks---notably MuJoCo~\cite{todorov2012mujoco}, Drake~\cite{drake}, and PyBullet~\cite{coumans2018pybullet}---support primitive collision geometries that admit closed-form distance and contact computations, but the generation of such primitives from existing URDF descriptions remains a gap.
+Current collision geometry authoring is largely manual: designers hand-place primitives, simplify meshes with modeling tools, or rely on convex decomposition.
+These approaches are time-consuming, hard to reproduce, and produce collision models at arbitrary fidelity levels.
+Simulators and planners---MuJoCo~\cite{todorov2012mujoco}, Drake~\cite{drake}, PyBullet~\cite{coumans2018pybullet}---support analytic collision geometries with closed-form distance computation, but generating such primitives from existing URDF descriptions remains unsolved.
 
 % ---- 3. Analytic primitives -%
-Analytic collision primitives offer significant advantages over mesh-based representations.
-Spheres, capsules, and boxes support stable signed-distance evaluation, analytical contact gradients, and efficient broad-phase culling in collision pipelines~\cite{pan2012fcl}.
-Capsules (swept spheres) are particularly well suited to robot links because their cylindrical body with hemispherical ends matches the elongated, rounded shape of many manipulator links.
-A capsule's distance function---the point-to-segment distance minus the capsule radius---can be evaluated in constant time, making it attractive for real-time collision checking and for computing swept volumes along motion trajectories.
-Despite these advantages, no widely adopted tool exists to automatically convert URDF mesh geometry into capsule-based collision primitives with provable coverage guarantees.
+Analytic primitives (spheres, capsules, boxes) offer significant advantages over meshes: stable signed-distance evaluation, analytical contact gradients, and efficient broad-phase culling~\cite{pan2012fcl}.
+Capsules (swept spheres) match the elongated shape of robot links, and their distance function---point-to-segment distance minus radius---evaluates in constant time.
+Despite these advantages, no widely adopted tool automatically converts URDF mesh geometry into analytic capsule primitives with coverage guarantees.
 
 % ---- 4. Our approach -%
 In this paper we introduce URDFApproxGeom, an integrated open-source toolchain that reads a URDF with mesh collision (or visual) geometry and outputs drop-in replacement URDFs with convex, sphere-tree, or capsule collision approximations.
