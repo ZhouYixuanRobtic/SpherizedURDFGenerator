@@ -69,18 +69,18 @@ protected:
 };
 
 TEST_F(URDFGeneratorTest, CVXTest) {
-    auto ret = convex_generator->run("/home/zyx/path_ws/src/ningde/simulation/rm_dcr_description/urdf/catl_robot11.urdf",
-                          "/home/zyx/path_ws/src/ningde/simulation/rm_dcr_description/urdf/catl_convex_hull.urdf",{
-                                             {"package:/", "/home/zyx/path_ws/src/ningde/simulation"}
+    auto ret = convex_generator->run("/home/irmv/project/Dual-Description/urdf/robot.urdf",
+                          "/home/irmv/project/Dual-Description/urdf/robot_convex.urdf",{
+                                             {"package://dual_description/", "/home/irmv/project/Dual-Description/"}
     });
 
     std::cout<<ret.error_msg()<<std::endl;
 }
 
 TEST_F(URDFGeneratorTest, STTest) {
-    auto ret = spherized_generator->run("/home/zyx/path_ws/src/franka_panda_description/robots/panda_arm.urdf",
-                          "/home/zyx/path_ws/src/franka_panda_description/robots/panda_arm_spherized.urdf",{
-                                             {"package:/", "/home/zyx/path_ws/src"}
+    auto ret = spherized_generator->run("/home/irmv/project/Dual-Description/urdf/robot_convex.urdf",
+                          "/home/irmv/project/Dual-Description/urdf/robot_spherized.urdf",{
+                                             {"package://dual_description/", "/home/irmv/project/Dual-Description/"}
                                      });
 
     std::cout<<ret.error_msg()<<std::endl;
