@@ -212,6 +212,7 @@ bot_common::ErrorInfo SphereTreeURDFGenerator::run(const std::string &urdf_path,
                                     link_pair.second->collision_array.clear();
                                     link_json["SubSpheres"] = nlohmann::json();
                                     auto& spheres_json = link_json["SubSpheres"];
+                                    int counter = 0;
                                     for (const SphereTreeMethod::Sphere &sub_sphere: tree.sub_spheres) {
                                         auto sphere_collision = std::make_shared<urdf::Collision>();
                                         rotated_vec = original_rotation * (centroid + sub_sphere.getData().head(3));
