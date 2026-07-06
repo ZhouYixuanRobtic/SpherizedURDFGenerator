@@ -18,7 +18,7 @@ While convex hulls provide tight mesh-based approximations suitable for most sim
 
 % ---- 3. Sphere-Tree Approximation -%
 Sphere trees are a classic collision geometry representation that approximates shapes with hierarchies of bounding spheres.
-The medial-axis sphere tree~\cite{bradshaw2002sphere, mlund_spheretree} constructs an inner approximation whose spheres lie within the original mesh, providing conservative collision estimates.
+The medial-axis sphere tree~\cite{bradshaw2002sphere, mlund_spheretree} constructs an inner approximation whose spheres lie within the original mesh, providing inner (under-approximating) collision estimates.
 Spherical approximations are particularly attractive for GPU-based collision pipelines and for signed-distance computations via sphere-sums~\cite{koptev2023neural}.
 Our sphere-tree mode uses the vendored \texttt{sphere\_tree} library~\cite{mlund_spheretree} to construct medial-axis trees with configurable density, outputting both a URDF with sphere primitives and a JSON sidecar.
 More recently, Foam~\cite{coumar2025foam} introduced an adaptive medial-axis approximation method specialized for spherical approximation of robot URDF geometries, sharing our goal of automating primitive generation for robot collision models. Unlike Foam's spherical-only output, our toolchain additionally produces capsule and convex approximations with analytic parameter export through a JSON sidecar.

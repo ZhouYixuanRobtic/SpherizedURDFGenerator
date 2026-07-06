@@ -4,12 +4,12 @@
   <link name="elbow_tube">
     <visual>
       <geometry>
-        <mesh filename="/home/admin1/projects/SpherizedURDFGenerator/doc/paper/artifacts/synthetic-morphology-benchmark/meshes/elbow_tube.obj" scale="1 1 1" />
+        <mesh filename="../meshes/elbow_tube.obj" scale="1 1 1" />
       </geometry>
     </visual>
     <collision>
       <geometry>
-        <mesh filename="/home/admin1/projects/SpherizedURDFGenerator/doc/paper/artifacts/synthetic-morphology-benchmark/meshes/elbow_tube.obj" scale="1 1 1" />
+        <mesh filename="../meshes/elbow_tube.obj" scale="1 1 1" />
       </geometry>
     </collision>
   </link>

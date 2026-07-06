@@ -10,7 +10,7 @@ Visual explanation of the capsule fitting method: PCA axis computation, cross-se
 ## Commands
 
 ```bash
-cd /home/admin1/projects/SpherizedURDFGenerator
+cd $(git rev-parse --show-toplevel)
 python3 doc/paper/artifacts/fig-capsule-method-schematic/generate_figure.py
 ```
 
