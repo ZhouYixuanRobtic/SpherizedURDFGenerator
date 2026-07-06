@@ -58,3 +58,22 @@ The principal-axis sectioning approach assumes each link has a clear longest axi
 \subsection{Reproducibility}
 
 The toolchain ensures reproducible execution through deterministic random seeds, fixed presets, and a containerized pipeline. Validation gates accept user-defined quality criteria (e.g., $\mathrm{capV/aabb} < 2.5$) for automated pass/fail checking.
+
+% ---- C7: Known Limitations ----
+\subsection{Known Limitations}
+
+The current release has several known limitations that users should be aware of:
+
+\begin{enumerate}
+    \item \textbf{Non-monotonic $N=4$ coverage.} Increasing section count from $N=2$ to $N=4$ can introduce a coverage gap at the split boundary between two capsules (Section~\ref{sec:experiments}-F). Users are advised to use $N=2$ for conservative coverage or $N \geq 6$ for tight fits.
+
+    \item \textbf{PCA axis assumption.} The capsule pipeline assumes each link has a dominant principal axis (Section~\ref{sec:discussion}). Highly branched, flat, or spherical links may produce poor capsule fits; convex or sphere modes are better choices in these cases.
+
+    \item \textbf{Splitting not triggered on typical arm links.} The inflation-based splitting pass (Section~\ref{sec:method}-F, Section~\ref{sec:metrics}-D) does not activate for the Franka FR3 under default parameters. Users with irregular link geometries may need to tune $\rho_{\max}$ and $\delta_{\min}$.
+
+    \item \textbf{Single-robot evaluation.} The current experiments are limited to the Franka FR3 arm (Section~\ref{sec:experiments}-B). Performance on other robot morphologies has not been characterized.
+
+    \item \textbf{JSON sidecar requires user integration.} The canonical capsule parameters in the sidecar are not consumed by standard URDF simulators (Section~\ref{sec:discussion}). Users must write a small integration layer to use them directly.
+
+    \item \textbf{No native Xacro support.} The toolchain accepts only plain URDF; Xacro files must be preprocessed externally (Section~\ref{sec:overview}-A).
+\end{enumerate}
