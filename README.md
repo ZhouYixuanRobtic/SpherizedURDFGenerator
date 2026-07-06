@@ -1,4 +1,10 @@
 # SpherizedURDFGenerator
+
+> [!IMPORTANT]
+> **This project has been superseded by [URDFApproxGeom](https://github.com/IRMV-Manipulation-Group/URDFApproxGeom).**
+> URDFApproxGeom is the next-generation rewrite with Python bindings, capsule/sphere/convex modes, JSON sidecar export, and Docker support.
+> This repository is kept for archival and v1 users. Pin to the `v1-legacy` tag if you depend on the C++-only toolchain.
+
 An automatic C++ only tool for generating spherized / convex version of collision geometry and write URDF automatically. 
 
 # Introduction
