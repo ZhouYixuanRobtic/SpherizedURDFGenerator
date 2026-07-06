@@ -61,6 +61,8 @@ $K_{\max}$ (default 12): hard per-link capsule limit. Excess capsules are remove
 \paragraph{Splitting.}
 $\rho_{\max}$ (default 1.45): radius-inflation split threshold ($\rho_{\max} = -1$ disables). $\eta_{\max}$ (default $-1$, disabled): volume-ratio split trigger. Splits accepted only when reducing union volume by at least $\delta_{\min} = 5 \times 10^{-3}$.
 
+On typical manipulator links such as the Franka FR3 arm, the initial capsule fit often yields $r/\mathrm{binMed}$ values below the default $\rho_{\max}$ of 1.45, and the capsule union volume stays within the default $\eta_{\max}$ bound, so the splitting pass is not triggered. Users working with more irregular geometries---L-shaped brackets, branched links, or links with significant axial taper---are more likely to see splitting activate. If splitting is desired but does not trigger, reduce $\rho_{\max}$ (e.g., to 1.15) and lower $\delta_{\min}$ (e.g., to $1\times 10^{-4}$) to admit more split candidates. A diagnostic log entry is emitted when a split is attempted and rejected by $\delta_{\min}$, which can guide tuning.
+
 \paragraph{Volume estimation.}
 $S$ (default 32): Monte Carlo samples per axis ($S^3$ total points).
 
