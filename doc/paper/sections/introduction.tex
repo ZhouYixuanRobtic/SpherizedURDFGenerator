@@ -17,7 +17,7 @@ Simulators and planners---MuJoCo~\cite{todorov2012mujoco}, Drake~\cite{drake}, P
 % ---- 3. Analytic primitives -%
 Analytic primitives (spheres, capsules, boxes) offer significant advantages over meshes: stable signed-distance evaluation, analytical contact gradients, and efficient broad-phase culling~\cite{pan2012fcl}.
 Capsules (swept spheres) match the elongated shape of robot links, and their distance function---point-to-segment distance minus radius---evaluates in constant time.
-Despite these advantages, no widely adopted tool automatically converts URDF mesh geometry into analytic capsule primitives with coverage guarantees.
+Despite these advantages, converting URDF mesh geometry into analytic capsule primitives with measured vertex coverage remains an open tooling gap.
 
 % ---- 4. Our approach -%
 In this paper we introduce URDFApproxGeom, an integrated open-source toolchain that reads a URDF with mesh collision (or visual) geometry and outputs drop-in replacement URDFs with convex, sphere-tree, or capsule collision approximations.
@@ -26,7 +26,7 @@ Our primary methodological contribution is an automatic capsule-fitting pipeline
 (i)~computing the principal axis of each link mesh via PCA;
 (ii)~slicing the mesh with planes perpendicular to this axis and extracting 2D cross-section contours;
 (iii)~fitting covering circles to each cross section using minimum enclosing circles and, where needed, adaptive Lloyd-style refinement to handle concave or multi-lobed sections;
-(iv)~chaining matched circles across adjacent sections into capsules, followed by collinear merging, coverage-preserving radius growth, endpoint tightening, inflation-based splitting, and nested-capsule pruning;
+(iv)~chaining matched circles across adjacent sections into capsules, followed by collinear merging, vertex-coverage-aware radius growth, endpoint tightening, inflation-based splitting, and nested-capsule pruning;
 (v)~emitting each capsule as a URDF-compatible cylinder-plus-two-sphere decomposition alongside a JSON sidecar with the canonical analytic parameters.
 
 % ---- 5. Broader system -%
@@ -38,7 +38,7 @@ A built-in comparison workflow generates side-by-side visualizations across all 
 In summary, this paper contributes:
 \begin{itemize}
     \item \textbf{An integrated URDF-to-primitive approximation pipeline} that preserves visual, inertial, and joint structure while replacing collision geometry with convex, sphere, or capsule primitives.
-    \item \textbf{A capsule-fitting method} that produces coverage-preserving, low-count analytic capsule primitives from robot link meshes through PCA sectioning, adaptive circle fitting, and tightness-guided refinement.
+    \item \textbf{A capsule-output pipeline} that converts robot link meshes into low-count analytic capsule primitives through PCA sectioning, adaptive circle fitting, radius growth, and tightness-guided refinement, with coverage treated as an explicit validation metric rather than an assumed guarantee.
     \item \textbf{A reproducible CLI/Python workflow} with named presets, validation metrics, pass/fail gates, and visualization bundles for qualitative comparison.
-    \item \textbf{Experimental evaluation} on the Franka FR3 robot (Section~\ref{sec:experiments}) characterizing coverage, volume tightness, primitive count, runtime, and preset sensitivity across all three modes, together with a capsule ablation study that isolates the effect of each fitting parameter.
+    \item \textbf{An artifact-backed empirical characterization} on the Franka FR3 robot, reporting primitive count, runtime, vertex coverage error, capsule union volume, and preset sensitivity across all three modes.
 \end{itemize}

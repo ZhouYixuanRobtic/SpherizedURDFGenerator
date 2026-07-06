@@ -89,7 +89,7 @@ Capsule & high\_detail & 10 & 1.32 & 1.32 & 21.8 \\
 
 \textbf{Capsule modes} produce 8--10 primitives with quantifiable tightness: $\mathrm{capV/aabb}$ ranges from 1.32 to 1.47 and $r$/binMed from 1.27 to 1.50 across presets. The \emph{high\_detail} preset achieves the best worst-case uncovered distance (2.3~mm). Runtime spans 12.7~s (\emph{single}) to 33.0~s (\emph{default}).
 
-\textbf{No analytic-primitive mode achieves complete coverage on all links.} Only convex mesh output guarantees full enclosure; sphere and capsule modes inherently trade coverage for tightness.
+\textbf{Under the current low-count presets, sphere and capsule configurations leave measurable vertex gaps on some links.} Only convex mesh output guarantees vertex enclosure by construction. This makes coverage an empirical acceptance criterion rather than a property of the representation.
 
 \begin{figure}[t]
 \centering
@@ -143,4 +143,4 @@ Collision mesh & Mesh source & 10 & 10.23 & 1.47 & 1.50 & 32.5 \\
 
 \textbf{Mesh source} (visual vs.\ collision) produces identical capsule fits on the FR3; this may not generalize to robots where collision and visual meshes diverge significantly.
 
-\textbf{No configuration achieves full coverage on all links---every variant leaves at least one link with a positive worst-case signed distance, confirming that the coverage-tightness trade-off is fundamental to the capsule representation.}
+\textbf{No low-count capsule configuration achieves full vertex coverage on all links---every variant leaves at least one link with a positive worst-case signed distance, confirming that the coverage-tightness trade-off is an empirical property of the current heuristic under these presets.}

@@ -7,7 +7,7 @@
 We have presented URDFApproxGeom, an integrated open-source toolchain for automatic conversion of mesh-based URDF collision geometry into convex, sphere-tree, and capsule approximations.
 The toolchain provides a unified CLI and Python API, named presets, validation metrics with pass/fail gates, and qualitative visualization support, making it immediately usable in existing robotics workflows.
 
-The main methodological contribution is the automatic capsule-fitting pipeline, which decomposes robot link meshes into coverage-preserving analytic capsule primitives through principal-axis sectioning, adaptive circle fitting, collinear merging, coverage-preserving growth, endpoint tightening, inflation-based splitting, and nested-capsule pruning.
+The main methodological contribution is the automatic capsule-output pipeline, which produces low-count analytic capsule primitives whose vertex coverage, tightness, and runtime can be measured and tuned through the accompanying validation workflow. The pipeline proceeds through principal-axis sectioning, adaptive circle fitting, collinear merging, vertex-coverage-aware growth, endpoint tightening, inflation-based splitting, and nested-capsule pruning.
 Each capsule is emitted as a URDF-compatible cylinder-plus-two-sphere decomposition alongside a JSON sidecar with the canonical analytic parameters.
 
 \subsection*{Future Work}

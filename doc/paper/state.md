@@ -1,11 +1,11 @@
 # Paper Loop State
 
-iteration: 23
-status: complete
+iteration: 24
+status: revising
 created: 2026-07-05T23:59:00+08:00
 
 ## Current Objective
-**COMPLETE.** Paper writing loop finished after 10 cold re-reads. All stop conditions satisfied.
+Gatekeeper revision: remove unsupported coverage guarantees and representation-level claims, re-scope novelty as an artifact-backed URDF primitive approximation tool, create new implementation requests for surface coverage, synthetic morphology stress tests, distance-query timing, and prior-art positioning.
 
 ## Open Requests
 | request_id | source | status | owner | path |
@@ -15,6 +15,11 @@ created: 2026-07-05T23:59:00+08:00
 | fig-capsule-method-schematic | writer | done | implement | doc/paper/requests/fig-capsule-method-schematic.md |
 | citation-survey | writer | done | implement | doc/paper/requests/citation-survey.md |
 | fig-qualitative-overlay | reviewer_iter_3 | done | implement | doc/paper/requests/fig-qualitative-overlay.md |
+| claim-consistency-audit | gatekeeper-review | open | implement | doc/paper/requests/claim-consistency-audit.md |
+| surface-coverage-metrics | gatekeeper-review | open | implement | doc/paper/requests/surface-coverage-metrics.md |
+| synthetic-morphology-benchmark | gatekeeper-review | open | implement | doc/paper/requests/synthetic-morphology-benchmark.md |
+| distance-query-benchmark | gatekeeper-review | open | implement | doc/paper/requests/distance-query-benchmark.md |
+| related-work-positioning-audit | gatekeeper-review | open | implement | doc/paper/requests/related-work-positioning-audit.md |
 
 ## Artifacts
 | request_id | status | result_path | summary |
@@ -54,4 +59,4 @@ created: 2026-07-05T23:59:00+08:00
 - **Metric consistency:** All modes consistently reported
 
 ## Next Action
-none
+implement

@@ -35,7 +35,7 @@ Until such an extension is adopted, toolchains like ours must maintain dual outp
 % ---- C. Coverage vs. Tightness ----
 \subsection{Coverage--Tightness Trade-off and Limitations}
 
-Conservative coverage---requiring every mesh vertex to lie inside at least one capsule---creates inherent tension with tightness. Our splitting strategy, guided by $r/\mathrm{binMed}$ and $\mathrm{capV/aabb}$, selectively splits capsules where radius inflation indicates geometric inefficiency, avoiding over-splitting in tight regions.
+The experiments should not be read as proving that analytic primitives cannot cover robot links. A sufficiently inflated sphere or capsule can cover any bounded link sample set. The observed limitation is narrower: under the current low-count presets and fitting heuristic, improved tightness can leave positive vertex gaps on some FR3 links. This makes coverage an empirical acceptance criterion rather than a property guaranteed by the representation.
 
 The principal-axis sectioning approach assumes each link has a clear longest axis for capsule orientation. While this holds for standard manipulator links, it may perform poorly on branched, flat, or spherical geometry. Additionally, PCA captures only global elongation; locally curved links may benefit from curved capsule chains or articulated capsule hierarchies.
 
